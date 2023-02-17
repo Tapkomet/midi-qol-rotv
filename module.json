@@ -1,0 +1,106 @@
+{
+  "id": "midi-qol-rotv",
+  "title": "Midi QOL for the Relics of the Void system",
+  "description": "Automates rolling weapon/spell attacks and applying damage",
+
+  "version": "10.0.29",
+  "authors": [{ "name": "tposney" }],
+  "socket": true,
+  "scripts": [],
+  "esmodules": ["src/midi-qol-rotv.js"],
+  "styles": ["css/styles.css"],
+  "relationships": {
+    "systems": [
+      {
+        "id": "rotv",
+        "type": "system",
+        "compatibility": {
+          "minimum": "0.2"
+        }
+      },
+      {
+        "id": "sw5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "2.0.2.2.2.5",
+          "compatible": "2.0.2.2.2.5"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "socketlib",
+        "type": "module"
+      },
+      {
+        "id": "lib-wrapper",
+        "type": "module"
+      }
+    ]
+  },
+  "packs": [
+    {
+      "name": "midiqol-sample-items",
+      "label": "MidiQOL Sample Items",
+      "path": "./packs/sampleitems.db",
+      "module": "world",
+      "type": "Item",
+      "system": "rotv",
+      "lang": []
+    }
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "ja",
+      "name": " 日本語",
+      "path": "lang/ja.json"
+    },
+    {
+      "lang": "ko",
+      "name": "Korean",
+      "path": "lang/ko.json"
+    },
+    {
+      "lang": "fr",
+      "name": "Français",
+      "path": "lang/fr.json"
+    },
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    },
+    {
+      "lang": "es",
+      "name": "Spanish",
+      "path": "lang/es.json"
+    },
+    {
+      "lang": "de",
+      "name": "Deutsch",
+      "path": "lang/de.json"
+    },
+    {
+      "lang": "it",
+      "name": "Italian",
+      "path": "lang/it.json"
+    }
+  ],
+  "compatibility": {
+    "minimum": 10.286,
+    "verified": 10,
+    "maximum": 10
+  },
+  "bugs": "https://gitlab.com/tposney/midi-qol-rotv/-/issues",
+  "flags": {
+    "allowBugReporter": true
+  },
+  "url": "https://github.com/Tapkomet/midi-qol-rotv",
+  "manifest": "https://raw.githubusercontent.com/Tapkomet/midi-qol-rotv/main/module.json",
+  "download": "https://github.com/Tapkomet/midi-qol-rotv/archive/refs/heads/main.zip"
+}
