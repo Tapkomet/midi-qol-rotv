@@ -1833,7 +1833,7 @@ export function checkRange(item, token, targets) {
 		longRange = 2 * longRange;
 	}
 	if (item.system.range.units === "touch") {
-		range = canvas?.dimensions?.distance ?? 5;
+		range = canvas?.dimensions?.distance ?? 1;
 		longRange = 0;
 	}
 	if (["mwak", "msak", "mpak"].includes(item.system.actionType) && !item.system.properties?.thr)
@@ -1848,8 +1848,13 @@ export function checkRange(item, token, targets) {
 			ui.notifications?.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`);
 			return "fail";
 		}
-		if (distance > range)
-			return "dis";
+        if (distance==1) return "pointBlank";
+        if (distance <= range * 0.5) return "close";
+        if (distance > range * 3) return "far";
+        if (distance > range) return "extended";
+
+		//if (distance > range)
+			//return "dis";
 		if (distance < 0) {
 			log(`${target.name} is blocked by a wall`);
 			ui.notifications?.warn(`${actor.name}'s target is blocked by a wall`);
@@ -3670,7 +3675,7 @@ export async function computeFlankedStatus(target) {
 		return false;
 	if (!canvas || !target)
 		return false;
-	const allies = findNearby(-1, target, (canvas?.dimensions?.distance ?? 5));
+	const allies = findNearby(-1, target, (canvas?.dimensions?.distance ?? 1));
 	if (allies.length <= 1)
 		return false; // length 1 means no other allies nearby
 	if (canvas?.grid?.grid instanceof SquareGrid) {

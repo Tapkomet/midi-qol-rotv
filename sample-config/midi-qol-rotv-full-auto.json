@@ -48,7 +48,7 @@
     "optionalRules": {
       "invisAdvantage": true,
       "checkRange": true,
-      "nearbyFoe": 5,
+      "nearbyFoe": 1,
       "nearbyAllyRanged": 0,
       "incapacitated": true,
       "removeHiddenInvis": true,
