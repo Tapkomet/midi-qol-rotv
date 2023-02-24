@@ -1,0 +1,25 @@
+[33mcommit 4bafdab2c2a5f323c21a35a4f8aeb533c4dcd4db[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: Tapkomet <romakobzar@ukr.net>
+Date:   Sat Feb 25 00:40:22 2023 +0200
+
+    Revert "Added range automation"
+    
+    This reverts commit c5127b90362bc99e5cf8fc729bdaad6f8691d76d.
+
+[33mcommit e70ee326b80169832315f436d068877d13b11d39[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: Tapkomet <romakobzar@ukr.net>
+Date:   Fri Feb 24 18:22:45 2023 +0200
+
+    Integrated changes from Midi QOL 10.0.30
+
+[33mcommit c5127b90362bc99e5cf8fc729bdaad6f8691d76d[m
+Author: Tapkomet <romakobzar@ukr.net>
+Date:   Fri Feb 24 18:10:53 2023 +0200
+
+    Added range automation
+
+[33mcommit 9fea22f1b8e77e3ac82369a0ffcd96da2700b2c0[m
+Author: Tapkomet <romakobzar@ukr.net>
+Date:   Fri Feb 17 19:40:15 2023 +0200
+
+    first commit
