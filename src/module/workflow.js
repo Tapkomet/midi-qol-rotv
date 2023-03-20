@@ -2757,12 +2757,12 @@ export class Workflow {
                         if(this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
                             distanceModifier = 9;
-                            console.log("adding nine");
+                            //console.log("adding nine");
                         }
                         else{
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
                             distanceModifier = 6;
-                            console.log("adding six");
+                            //console.log("adding six");
                         }
                     }
                 	break;
@@ -2772,12 +2772,12 @@ export class Workflow {
                         if (this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
                             distanceModifier = 6;
-                            console.log("adding six");
+                            //console.log("adding six");
                         }
                         else{
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(3) }));
                             distanceModifier = 3;
-                            console.log("adding three");
+                            //console.log("adding three");
                         }
                     }
                 	break;
