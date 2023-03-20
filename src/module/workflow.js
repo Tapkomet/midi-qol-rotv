@@ -2747,36 +2747,37 @@ export class Workflow {
 		//console.log(this.attackTotal);
         let distanceModifier = 0;
         if (checkMechanic("checkRange")  && !this.item.system.properties?.bla  && !this.item.system.properties?.smk && !this.AoO && this.tokenId){
+
             switch(this.distanceBracket){
                 case("normal"):
                     break;
                 case "pointBlank":
-                    if (!this.item.system.properties?.spr && !this.item.system.actionType==="mwak" && !this.item.system.properties?.unw){
+                    if (!this.item.system.properties?.spr && this.item.system.actionType!=="mwak" && !this.item.system.properties?.unw){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
                         if(this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
                             distanceModifier = 9;
-                            //console.log("adding nine");
+                            console.log("adding nine");
                         }
                         else{
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
                             distanceModifier = 6;
-                            //console.log("adding six");
+                            console.log("adding six");
                         }
                     }
                 	break;
                 case "close" :
-                    if (!this.item.system.properties?.spr && !this.item.system.actionType==="mwak" && !this.item.system.properties?.unw){
-                        this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
+                    if (!this.item.system.properties?.spr && this.item.system.actionType!=="mwak" && !this.item.system.properties?.unw){
+                        //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
                         if (this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
                             distanceModifier = 6;
-                            //console.log("adding six");
+                            console.log("adding six");
                         }
                         else{
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(3) }));
                             distanceModifier = 3;
-                            //console.log("adding three");
+                            console.log("adding three");
                         }
                     }
                 	break;
@@ -2784,21 +2785,21 @@ export class Workflow {
                     //this.attackRoll.terms.push(new OperatorTerm({ operator: "-" }));
                     //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
                     distanceModifier = -9;
-                    //console.log("substracting nine");
+                    console.log("subtracting nine");
                 	break;
                 case "extended":
                     //this.attackRoll.terms.push(new OperatorTerm({ operator: "-" }));
                     //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
                     distanceModifier = -3;
-                    //console.log("subtracting three");
+                    console.log("subtracting three");
                 	break;
             }
         }
 
         this.attackTotal += distanceModifier;
 
-		console.log("after: ");
-		console.log(this.attackTotal);
+		//console.log("after: ");
+		//console.log(this.attackTotal);
 
 		// check for a hit/critical/fumble
 		if (item?.system.target?.type === "self") {
