@@ -226,6 +226,10 @@ export function calculateDamage(item, a, appliedDamage, t, totalDamage, dmgType,
 
 
 	if (item.data.data.properties["buc"]) dr = dr * 3;
+	if (item.data.data.properties["bon"]) dr = dr * 3;
+	if (item.data.data.properties["cha"]) dr = dr * 2;
+	if (item.data.data.properties["fla"]) dr = dr * 0.5;
+	if (item.data.data.properties["fsf"]) dr = dr * 0.5;
 	if (item.data.data.properties["arp"]) dr = dr * 0.5;
 	if (item.data.data.properties["pen"]) dr = dr * 0.25;
     dr = Math.floor(dr);
