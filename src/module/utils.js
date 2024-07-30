@@ -224,14 +224,10 @@ export function calculateDamage(item, a, appliedDamage, t, totalDamage, dmgType,
 	var hp = a.system.attributes.hp;
 	var dr = a.system.attributes.damRed;
 
-
-	if (item.data.data.properties["buc"]) dr = dr * 3;
-	if (item.data.data.properties["bon"]) dr = dr * 3;
-	if (item.data.data.properties["cha"]) dr = dr * 2;
-	if (item.data.data.properties["fla"]) dr = dr * 0.5;
-	if (item.data.data.properties["fsf"]) dr = dr * 0.5;
-	if (item.data.data.properties["arp"]) dr = dr * 0.5;
-	if (item.data.data.properties["pen"]) dr = dr * 0.25;
+	if (item.system.properties["bon"]||item.system.properties["buc"]) dr = dr * 3;
+	if (item.system.properties["cha"]) dr = dr * 2;
+	if (item.system.properties["fla"]||item.system.properties["fsf"]||item.system.properties["arp"]) dr = dr * 0.5;
+	if (item.system.properties["pen"]) dr = dr * 0.25;
     dr = Math.floor(dr);
 
 	var oldHP, tmp;
@@ -1448,7 +1444,7 @@ export async function completeItemUse(item, config = {}, options = { checkGMstat
 	let theItem = item;
 	if (!(item instanceof CONFIG.Item.documentClass)) {
 		// TODO magic items fetch the item call - see when v10 supported
-		theItem = new CONFIG.Item.documentClass(await item.item.data(), { parent: item.actor });
+		theItem = new CONFIG.Item.documentClass(await item.item.system(), { parent: item.actor });
 	}
 	if (game.user?.isGM || !options.checkGMStatus) {
 		return new Promise((resolve) => {
@@ -2869,7 +2865,7 @@ async function getMagicItemReactions(actor, triggerType) {
 		for (let magicItem of magicItemActor.items) {
 			for (let ownedItem of magicItem.ownedEntries) {
 				try {
-					const theItem = await ownedItem.item.data();
+					const theItem = await ownedItem.item.system();
 					if (theItem.system.activation.type === triggerType) {
 						items.push(ownedItem);
 					}

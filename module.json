@@ -2,7 +2,7 @@
   "id": "midi-qol-rotv",
   "title": "Midi QOL for the Relics of the Void system",
   "description": "Automates rolling weapon/spell attacks and applying damage",
-  "version": "10.0.37",
+  "version": "10.0.38",
   "authors": [
     {
       "name": "tposney",

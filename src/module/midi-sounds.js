@@ -101,7 +101,7 @@ export class MidiSounds {
 			await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
 			const weaponTypes = game.system.id === "rotv" ? Object.keys(config.ROTV.weaponTypes) : Object.keys(config.SW5E.weaponTypes);
 			;
-			const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheet5e`].cls;
+			const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheetRelics`].cls;
 			for (let wt of weaponTypes) {
 				const baseTypes = await MidiSounds.getItemBaseTypes("weapon", wt);
 				MidiSounds.weaponBaseTypes = mergeObject(MidiSounds.weaponBaseTypes, baseTypes);

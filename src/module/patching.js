@@ -1032,7 +1032,7 @@ export function readyPatching() {
 	if (game.system.id === "rotv" || game.system.id === "n5e") {
 		libWrapper.register("midi-qol-rotv", `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
 	}
-	else { // TODO find out what itemsheet5e is called in sw5e TODO work out how this is set for sw5e v10
+	else { // TODO find out what ItemSheetRelics is called in sw5e TODO work out how this is set for sw5e v10
 		libWrapper.register("midi-qol-rotv", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
 	}
 	libWrapper.register("midi-qol-rotv", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");

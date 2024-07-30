@@ -434,7 +434,7 @@ export async function doAttackRoll(wrapped, options = { versatile: false, resetA
 		log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}ms`);
 	if (!result)
 		return result;
-	console.warn("testing: advantage/disadvantage", workflow.attackAdvAttribution);
+	//console.warn("testing: advantage/disadvantage", workflow.attackAdvAttribution);
 	result = Roll.fromJSON(JSON.stringify(result.toJSON()));
 	if (workflow.workflowType === "BetterRollsWorkflow") {
 		// we are rolling this for better rolls
@@ -1169,7 +1169,7 @@ export function rollAttackHook(item, roll, ammoUpdate) {
 		error("Expected workflow/roll to be defined?");
 		return;
 	}
-	console.warn("testing: advantage/disadvantage", workflow.attackAdvAttribution);
+	//console.warn("testing: advantage/disadvantage", workflow.attackAdvAttribution);
 	result = Roll.fromJSON(JSON.stringify(result.toJSON()));
 	if (workflow.workflowType === "BetterRollsWorkflow") {
 		// we are rolling this for better rolls
