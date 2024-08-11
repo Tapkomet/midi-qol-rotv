@@ -2786,9 +2786,9 @@ export function checkRange(itemIn, tokenRef, targetsRef, showWarning = true) {
 			longRange = 2 * longRange;
 		}
 		if (item.system.range.units === "touch") {
-			range = canvas?.dimensions?.distance ?? 5;
+			range = canvas?.dimensions?.distance ?? 1;
 			if (item.system.properties?.has("rch"))
-				range += canvas?.dimensions?.distance ?? 5;
+				range += canvas?.dimensions?.distance ?? 1;
 			longRange = 0;
 		}
 		if (["mwak", "msak", "mpak"].includes(item.system.actionType) && !item.system.properties?.has("thr"))
