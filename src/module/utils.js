@@ -190,12 +190,13 @@ export function getTokenForActorAsSet(actor) {
 	return new Set();
 }
 // Calculate the hp/tempHP lost for an amount of damage of type
-export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, existingDamage) {
+export function calculateDamage(item, a, appliedDamage, t, totalDamage, dmgType, existingDamage) {
 	if (debugEnabled > 1)
 		debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType);
 	let prevDamage = existingDamage?.find(ed => ed.tokenId === t.id);
 	//@ts-expect-error attributes
 	var hp = a.system.attributes.hp;
+
 	var oldHP, tmp, oldVitality, newVitality, vitalityDamage;
 	const vitalityResource = checkRule("vitalityResource");
 	if (hp.value <= 0 && typeof vitalityResource === "string" && foundry.utils.getProperty(a, vitalityResource) !== undefined) {
@@ -204,6 +205,18 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
 		newVitality = Math.max(0, oldVitality - appliedDamage);
 		vitalityDamage = appliedDamage;
 	}
+
+	var dr = a.system.attributes.damRed;
+
+
+	if (item.system.properties.has("bon")||item.system.properties.has("buc")) dr = dr * 3;
+	if (item.system.properties.has("npr")) dr = dr * 2;
+	if (item.system.properties.has("fla")||item.system.properties.has("fsf")||item.system.properties.has("arp")) dr = dr * 0.5;
+	if (item.system.properties.has("pun")) dr = dr * 0.25;
+
+    dr = Math.floor(dr);
+
+
 	if (prevDamage) {
 		oldHP = prevDamage.newHP;
 		tmp = prevDamage.newTempHP;
@@ -212,7 +225,17 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
 		oldHP = hp.value;
 		tmp = parseInt(hp.temp) || 0;
 	}
+
+
 	let value = appliedDamage < 0 ? Math.ceil(appliedDamage) : Math.floor(appliedDamage);
+
+
+    if (!dmgType.includes("healing")) { // //apply dr if this isn't healing
+	        if (dr > value) {value = 0;}
+    		else {value = value - dr;}
+    }
+
+
 	if (dmgType.includes("temphp")) { // only relevent for healing of tmp HP
 		var newTemp = Math.max(tmp, -value, 0);
 		var newHP = oldHP;
@@ -363,6 +386,9 @@ export let getTraitMult = (actor, dmgTypeString, item, damageProperties = []) =>
 	// Check the custom immunities
 };
 export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options = { label: "defaultDamage", existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: false, noConcentrationCheck: false }) {
+	console.warn("applyTokenDamage");
+	console.warn(item);
+
 	let allDamages = {};
 	damageDetail = damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }));
 	if (configSettings.v3DamageApplication) {
@@ -786,7 +812,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
 		// Deal with vehicle damage threshold.
 		if (appliedDamage > 0 && appliedDamage < (targetActor.system.attributes.hp.dt ?? 0))
 			appliedDamage = 0;
-		let ditem = calculateDamage(targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
+		let ditem = calculateDamage(item, targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
 		ditem.tempDamage = ditem.tempDamage + appliedTempHP;
 		if (appliedTempHP <= 0) { // temp healing applied to actor does not add only gets the max
 			ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
@@ -1022,6 +1048,8 @@ export async function processDamageRoll(workflow, defaultDamageType) {
 		&& itemOtherFormula(workflow.saveItem) === "")
 		baseDamageSaves = workflow.saves ?? new Set();
 	if (configSettings.v3DamageApplication) {
+
+
 		const allDamages = {};
 		workflow.damageList = [];
 		let totalDamage = 0;
@@ -1031,12 +1059,19 @@ export async function processDamageRoll(workflow, defaultDamageType) {
 		if (workflow.bonusDamageRolls?.length > 0)
 			totalDamage += workflow.bonusDamageRolls.reduce((acc, roll) => acc + (roll.total ?? 0), 0);
 		for (let tokenRef of theTargets) {
+
+
+
 			const token = getToken(tokenRef);
 			const tokenDocument = getTokenDocument(tokenRef);
 			if (!token?.actor)
 				continue;
 			if (!tokenDocument)
 				continue;
+
+
+
+
 			let challengeModeScale = 1;
 			allDamages[tokenDocument?.uuid] = {
 				uuid: getTokenDocument(token)?.uuid,
@@ -1058,11 +1093,18 @@ export async function processDamageRoll(workflow, defaultDamageType) {
 				challengeModeScale = scale;
 			}
 			allDamages[tokenDocument.uuid].challengeModeScale = challengeModeScale;
+
+
+			const tokenDamages = allDamages[tokenDocument.uuid].tokenDamages;
+
+
 			if (totalDamage !== 0 && (workflow.hitTargets.has(token) || workflow.hitTargetsEC.has(token) || workflow.saveItem.hasSave)) {
 				const isHealing = ("heal" === workflow.item?.system.actionType);
 				await doReactions(token, workflow.tokenUuid, workflow.damageRolls ?? workflow.bonusDamageRolls ?? [workflow.otherDamageRoll], !isHealing ? "reactiondamage" : "reactionheal", { item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor?.uuid, sourceItemUuid: workflow.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
 			}
-			const tokenDamages = allDamages[tokenDocument.uuid].tokenDamages;
+
+
+
 			for (let [rolls, saves, type] of [[workflow.damageRolls, baseDamageSaves, "defaultDamage"], [(workflow.otherDamageMatches?.has(token) ?? true) ? [workflow.otherDamageRoll] : [], workflow.saves, "otherDamage"], [workflow.bonusDamageRolls, bonusDamageSaves, "bonusDamage"]]) {
 				if (rolls?.length > 0 && rolls[0]) {
 					//@ts-expect-error
@@ -1129,6 +1171,10 @@ export async function processDamageRoll(workflow, defaultDamageType) {
 					}, { insertKeys: true, insertValues: true });
 					//@ts-expect-error
 					let returnDamages = foundry.utils.duplicate(token.actor.calculateDamage(damages, options));
+
+	                console.warn("returnDamages");
+    	            console.warn(returnDamages);
+
 					if (configSettings.singleConcentrationRoll || type !== "otherDamage") {
 						tokenDamages[type] = returnDamages;
 						tokenDamages["combinedDamage"] = tokenDamages["combinedDamage"].concat(returnDamages);

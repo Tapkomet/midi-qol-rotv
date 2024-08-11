@@ -1314,6 +1314,10 @@ export class Workflow {
 						let damageApplied;
 						let totalDamage;
 						if (configSettings.v3DamageApplication) {
+
+						    console.warn("hasItemTargetEffects");
+                        	console.warn(item);
+
 							const allDamages = this.v3Damages?.[token.document.uuid];
 							if (allDamages) {
 								totalDamage = allDamages.totalDamage;
@@ -4112,16 +4116,16 @@ export class Workflow {
 		let item = this.item;
 
         //apply distance modifier
-		console.log("before: ");
-		console.log(this.attackRoll.total);
-		console.log(this.attackTotal);
+		//console.log("before: ");
+		//console.log(this.attackRoll.total);
+		//console.log(this.attackTotal);
         let distanceModifier = 0;
         if (checkMechanic("checkRange")  && !this.item.system.properties?.bla  && !this.item.system.properties?.smk && !this.AoO && this.tokenId){
             switch(this.distanceBracket){
                 case("normal"):
                     break;
                 case "pointBlank":
-                    if (!this.item.system.properties?.spr && !this.item.system.actionType==="mwak" && !this.item.system.properties?.unw){
+                    if (!this.item.system.properties?.spr && this.item.system.actionType!=="mwak" && !this.item.system.properties?.unw){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
                         if(this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
@@ -4136,7 +4140,7 @@ export class Workflow {
                     }
                 	break;
                 case "close" :
-                    if (!this.item.system.properties?.spr && !this.item.system.actionType==="mwak" && !this.item.system.properties?.unw){
+                    if (!this.item.system.properties?.spr && this.item.system.actionType!=="mwak" && !this.item.system.properties?.unw){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
                         if (this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
@@ -4167,8 +4171,8 @@ export class Workflow {
 
         this.attackTotal += distanceModifier;
 
-		console.log("after: ");
-		console.log(this.attackTotal);
+		//console.log("after: ");
+		//console.log(this.attackTotal);
 
 
 		// check for a hit/critical/fumble
