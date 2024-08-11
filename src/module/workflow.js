@@ -655,7 +655,13 @@ export class Workflow {
 		}
 		// do pre roll checks
 		if (checkMechanic("checkRange") !== "none" && (!this.AoO || ["rwak", "rsak", "rpak"].includes(this.item.system.actionType)) && this.tokenId) {
+		    //console.warn("calling checkRange from preroll check");
 			const { result, attackingToken, range, longRange } = checkRange(this.item, canvas?.tokens?.get(this.tokenId) ?? "invalid", this.targets);
+		    //console.warn("result:" + result);
+			//console.warn(attackingToken);
+            //console.warn("range:" + range);
+            //console.warn("longRange:" + longRange);
+
 			switch (result) {
 				case "fail": return this.WorkflowState_RollFinished;
 				case "dis":
@@ -663,9 +669,9 @@ export class Workflow {
 					this.attackAdvAttribution.add("DIS:range");
 					this.advReminderAttackAdvAttribution.add("DIS:Long Range");
 			}
-			if (this.attackingToken !== attackingToken) { // changed the attacking token so update the canSee data
-				// need to clean this up
-				for (let tokenRef of this.targets) {
+			if (this.attackingToken !== attac
+				for (let tokenRef of thiskingToken) { // changed the attacking token so update the canSee data
+				// need to clean this up.targets) {
 					const target = getToken(tokenRef);
 					this.attackingToken = attackingToken;
 					const token = this.attackingToken;

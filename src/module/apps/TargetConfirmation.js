@@ -95,17 +95,21 @@ export class TargetConfirmationDialog extends Application {
 			}
 			let attackerToken = token;
 			if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "mpak", "rwak", "rsak", "rpak"].includes(this.data.item.system.actionType))) {
+			    //console.warn("details.push");
 				const { result, attackingToken } = checkRange(this.data.item, token, new Set([target]), false);
 				if (attackingToken)
 					attackerToken = attackingToken;
 				switch (result) {
 					case "normal":
+					    //console.warn("details.push: "+(`${i18n("ROTV.RangeNormal")}`));
 						details.push(`${i18n("ROTV.RangeNormal")}`);
 						break;
 					case "dis":
+					    //console.warn("details.push: "+(`${i18n("ROTV.RangeLong")}`));
 						details.push(`${i18n("ROTV.RangeLong")}`);
 						break;
 					case "fail":
+					    //console.warn("details.push: "+(`${i18n("ROTV.OutOfRange")}`));
 						details.push(`${i18n("midi-qol-rotv.OutOfRange")}`);
 						break;
 				}

@@ -2809,6 +2809,7 @@ export function checkRange(itemIn, tokenRef, targetsRef, showWarning = true) {
 			// check the range
 			const distance = getDistance(token, target, configSettings.optionalRules.wallsBlockRange && !foundry.utils.getProperty(item, "flags.midiProperties.ignoreTotalCover"));
 			//console.warn("longrange: "+longRange + ", range: "+range, ", distance: "+distance);
+			//console.warn(checkMechanic("checkRange"));
 			if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
 				log(`${target.name} is too far ${distance} from your character you cannot hit`);
 				if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak", "rpak"].includes(item.system.actionType)) {
@@ -2820,7 +2821,6 @@ export function checkRange(itemIn, tokenRef, targetsRef, showWarning = true) {
 					};
 				}
 				else {
-			        //console.warn("previous fail");
 					return {
 						result: "fail",
 						reason: `${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
@@ -2829,14 +2829,14 @@ export function checkRange(itemIn, tokenRef, targetsRef, showWarning = true) {
 					};
 				}
 			}
-			if (distance > range)
-			    //console.warn("distance > range");
+			if (distance > range) {
 				return {
-					result: "dis",
+					result: "disNuts",
 					reason: `${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
 					range,
 					longRange
 				};
+			}
 			if (distance < 0) {
 				log(`${target.name} is blocked by a wall`);
 				return {
