@@ -2,6 +2,16 @@ import { i18n } from "../midi-qol-rotv.js";
 import { autoFastForwardAbilityRolls, configSettings } from "./settings.js";
 import { isAutoFastAttack, isAutoFastDamage } from "./utils.js";
 export class MidiKeyManager {
+	resetKeyState() {
+		this._adv = false;
+		this._dis = false;
+		this._vers = false;
+		this._other = false;
+		this._rollToggle = false;
+		this._fastForward = false;
+		this._fastForwardSet = false;
+		this._critical = false;
+	}
 	constructor() {
 		this._adv = false;
 		this._dis = false;
@@ -31,71 +41,6 @@ export class MidiKeyManager {
 			autoRollDamage: undefined
 		};
 		this.resetKeyState();
-		window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
-	}
-	resetKeyState() {
-		this._adv = false;
-		this._dis = false;
-		this._vers = false;
-		this._other = false;
-		this._rollToggle = false;
-		this._fastForward = false;
-		this._fastForwardSet = false;
-		this._critical = false;
-	}
-	handleKeyUpEvent(event) {
-		if (!configSettings.fixStickyKeys)
-			return;
-		if (event.isComposing)
-			return;
-		if (!event.key && !event.code)
-			return;
-		const debug = CONFIG.debug;
-		const keyboardManager = game.keyboard;
-		if (!keyboardManager?.hasFocus)
-			return;
-		//@ts-ignore
-		const context = KeyboardManager.getKeyboardEventContext(event, true);
-		// Don't do anything if downKeys for the key is not set
-		// Had to take this out since ctrl-space removes the downKey(Control) but does not send a CTRL-Up status
-		//@ts-ignore .downKeys
-		// if (!keyboardManager?.downKeys.has(context.key)) return;
-		if (!(keyboardManager?.hasFocus && ["Control", "Alt", "Shift"].includes(context.event.key)))
-			return;
-		//@ts-ignore
-		keyboardManager?.downKeys.delete(context.key);
-		// Open debugging group
-		if (debug.keybindings) {
-			console.group(`[${context.up ? 'UP' : 'DOWN'}] Checking for keybindings that respond to ${context.modifiers}+${context.key}`);
-			console.dir(context);
-			//@ts-ignore
-			console.log("midi-qol-rotv | keyboard handler removing key pressed status for ", context.key);
-		}
-		// Check against registered Keybindings
-		//@ts-ignore
-		const actions = KeyboardManager._getMatchingActions(context);
-		if (actions.length === 0) {
-			if (debug.keybindings) {
-				console.log("No matching keybindings");
-				console.groupEnd();
-			}
-			return;
-		}
-		// Execute matching Keybinding Actions to see if any consume the event
-		let handled;
-		for (const action of actions) {
-			//@ts-ignore
-			handled = KeyboardManager._executeKeybind(action, context);
-			if (handled)
-				break;
-		}
-		// Don't Cancel event since it should do whatever else it is supposed to.
-		if (handled && context.event) {
-			if (debug.keybindings)
-				console.log("Event was not consumed");
-		}
-		if (debug.keybindings)
-			console.groupEnd();
 	}
 	getstate() {
 		const state = {
@@ -120,13 +65,6 @@ export class MidiKeyManager {
 		return state;
 	}
 	get pressedKeys() {
-		if (configSettings.fixStickyKeys) {
-			const formElements = ["button"];
-			const selector = formElements.map(el => `${el}:focus`).join(", ");
-			const selectors = document.querySelectorAll(selector);
-			//@ts-ignore
-			// if (selectors.length > 0) selectors.forEach(selector => selector.blur())
-		}
 		const returnValue = this.getstate();
 		this._lastReturned = returnValue;
 		//@ts-ignore
@@ -158,8 +96,8 @@ export class MidiKeyManager {
 				{ key: "AltLeft" },
 				{ key: "AltRight" },
 			],
-			onDown: () => { this._adv = true; this.track("adv down"); console.error("advantage fired"); return false; },
-			onUp: () => { this._adv = false; this.track("adv up"); console.error("Advantage released"); return false; },
+			onDown: () => { this._adv = true; this.track("adv down"); return false; },
+			onUp: () => { this._adv = false; this.track("adv up"); return false; },
 			restricted: worldSettings,
 			precedence: normalPrecedence
 		});
@@ -251,11 +189,24 @@ export class MidiKeyManager {
 			restricted: worldSettings,
 			precedence: normalPrecedence
 		});
+		Hooks.on('renderDialog', (dialog, html, data) => {
+			//@ts-expect-error
+			if (CONFIG.debug.keybindings)
+				console.log("midi-qol-rotv | dialog rendered - releasing keys");
+			//@ts-expect-error
+			game.keyboard?.releaseKeys({ force: true });
+		});
+		Hooks.on('renderDialogV2', (dialog, html, data) => {
+			//@ts-expect-error
+			if (CONFIG.debug.keybindings)
+				console.log("midi-qol-rotv | dialog v2 rendered - releasing keys");
+			//@ts-expect-error
+			game.keyboard?.releaseKeys({ force: true });
+		});
 	}
 }
 export function mapSpeedKeys(keys, type, forceToggle = false) {
-	// if (installedModules.get("betterrolls5e")) return undefined;
-	const pressedKeys = deepClone(keys ?? globalThis.MidiKeyManager.pressedKeys);
+	const pressedKeys = foundry.utils.deepClone(keys ?? globalThis.MidiKeyManager.pressedKeys);
 	let hasToggle = pressedKeys.rollToggle || forceToggle;
 	if (pressedKeys.rollToggle && forceToggle)
 		hasToggle = false;

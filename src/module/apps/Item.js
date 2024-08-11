@@ -13,7 +13,7 @@ export class OnUseMacros {
 		return macros;
 	}
 	getMacros(currentOption) {
-		return this.items.filter(x => x.macroName?.length > 0 && (x.option === currentOption || x.option === "all")).map(x => x.macroName).toString();
+		return this.items.filter(x => x.macroName?.length > 0 && (x.option.toLocaleLowerCase() === currentOption.toLocaleLowerCase() || x.option === "all")).map(x => x.macroName).toString();
 	}
 	toString() {
 		return this.items.map(m => m.toString()).join(',');
@@ -25,7 +25,7 @@ export class OnUseMacros {
 export class OnUseMacro {
 	constructor(macro = undefined) {
 		if (macro === undefined) {
-			this.macroName = "";
+			this.macroName = "ItemMacro";
 		}
 		else {
 			const pattern = new RegExp('(?:\\[(?<option>.*?)\\])?(?<macroName>.*)', '');
@@ -48,7 +48,7 @@ export class OnUseMacro {
 	toListItem(index, macroOptions) {
 		const options = OnUseMacroOptions.getOptions?.reduce((opts, x) => opts += `<option value="${x.option}" ${x.option === this.option ? 'selected' : ''}>${x.label}</option>`, "");
 		return `<li class="damage-part flexrow" data-midiqol-macro-part="${index}">
-	<input type="text" name="flags.midi-qol-rotv.onUseMacroParts.items.${index}.macroName" value="${this.macroName}">
+	<input type="text" class="midi-onuse-macro-name" name="flags.midi-qol-rotv.onUseMacroParts.items.${index}.macroName" value="${this.macroName}">
 	<select name="flags.midi-qol-rotv.onUseMacroParts.items.${index}.option">
 	${options}
 	</select>
@@ -71,7 +71,28 @@ export class OnUseMacroOptions {
 export function activateMacroListeners(app, html) {
 	//@ts-ignore
 	if (app.isEditable) {
-		html.find(".macro-control").click(_onMacroControl.bind(app));
+		$(html).find(".macro-control").on("click", _onMacroControl.bind(app));
+		const dd = new DragDrop({
+			dragSelector: undefined,
+			dropSelector: ".midi-onuse-macro-name",
+			permissions: { dragstart: () => false, drop: () => true },
+			callbacks: { drop: _onDrop },
+		});
+		//    let form = html.filter((i, el) => el instanceof HTMLFormElement)[0];
+		//    if (!form) form = html.find("form")[0]
+		//@ts-expect-error .form
+		dd.bind(app.form);
+	}
+}
+async function _onDrop(ev) {
+	console.error("on drop called");
+	ev.preventDefault();
+	//@ts-ignore
+	const data = TextEditor.getDragEventData(ev);
+	if (data.uuid) {
+		const itemOrMacro = await fromUuid(data.uuid);
+		if (itemOrMacro instanceof Item || itemOrMacro instanceof Macro)
+			ev.target.value = `${data.uuid}`;
 	}
 }
 async function _onMacroControl(event) {
@@ -80,25 +101,33 @@ async function _onMacroControl(event) {
 	// Add new macro component
 	if (a.classList.contains("add-macro")) {
 		const macros = getCurrentSourceMacros(this.object);
+		this.selectMidiTab = true;
 		await this._onSubmit(event); // Submit any unsaved changes
 		macros.items.push(new OnUseMacro());
-		return this.object.update({ "flags.midi-qol-rotv.onUseMacroName": macros.toString() });
+		this.selectMidiTab = true;
+		await this.object.update({ "flags.midi-qol-rotv.onUseMacroName": macros.toString() });
 	}
 	// Remove a macro component
 	if (a.classList.contains("delete-macro")) {
 		const macros = getCurrentSourceMacros(this.object);
-		await this._onSubmit(event); // Submit any unsaved changes
 		const li = a.closest(".damage-part");
+		this.selectMidiTab = true;
+		await this._onSubmit(event); // Submit any unsaved changes
 		macros.items.splice(Number(li.dataset.midiqolMacroPart), 1);
-		return this.object.update({ "flags.midi-qol-rotv.onUseMacroName": macros.toString() });
+		this.selectMidiTab = true;
+		await this.object.update({ "flags.midi-qol-rotv.onUseMacroName": macros.toString() });
 	}
+	if (a.classList.contains("edit-macro")) {
+		new globalThis.DAE.DIMEditor(this.document, {}).render(true);
+	}
+	this.selectMidiTab = true;
 }
 export function getCurrentMacros(object) {
-	const macroField = getProperty(object, "flags.midi-qol-rotv.onUseMacroParts");
+	const macroField = foundry.utils.getProperty(object, "flags.midi-qol-rotv.onUseMacroParts");
 	return macroField;
 }
 export function getCurrentSourceMacros(object) {
-	const macroField = new OnUseMacros(getProperty(object, "_source.flags.midi-qol-rotv.onUseMacroName") ?? null);
-	// const macroField = getProperty(object, "_source.flags.midi-qol-rotv.onUseMacroParts");
+	const macroField = new OnUseMacros(foundry.utils.getProperty(object, "_source.flags.midi-qol-rotv.onUseMacroName") ?? null);
+	// const macroField = foundry.utils.getProperty(object, "_source.flags.midi-qol-rotv.onUseMacroParts");
 	return macroField;
 }

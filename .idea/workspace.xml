@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="a62c9d64-b07a-4b47-bbdc-b26e9932639d" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/icons/bonus-action.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/icons/reaction.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/sample-config/midi-qol-rotv-full-auto.json.bak" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/ChatMessageMidi.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/apps/TargetConfirmation.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/apps/TargetConfirmationConfig.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/apps/TroubleShooter.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/apps/UndoWorkflow.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/chatMessageHandling.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/lib/FormBuilder.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/lib/sockset.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/module/undo.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/attack-roll.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/bonus-damage-roll.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/damage-roll-dialog.hbs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/damage-roll.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/item-card.hbs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/itemProperties.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/midiPropertiesForm.hbs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/other-damage-roll.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/roll-base.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/roll-dialog.hbs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/targetConfirmation.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/targetConfirmationConfig.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/tool-card.hbs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/tooltip.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/troubleShooter.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/undo-workflow.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/styles copy.css" beforeDir="false" afterPath="$PROJECT_DIR$/css/styles copy.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/css/styles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/df" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/de.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/en.json" beforeDir="false" afterPath="$PROJECT_DIR$/lang/en.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/es.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/fr.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/it.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/ja.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/ko.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lang/pt-BR.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/module.json" beforeDir="false" afterPath="$PROJECT_DIR$/module.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packs/midi-sample-tracks.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/sample-config/midi-qol-rotv-full-auto.json" beforeDir="false" afterPath="$PROJECT_DIR$/sample-config/midi-qol-rotv-full-auto.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sample-config/midi-qol-rotv-manual.json" beforeDir="false" afterPath="$PROJECT_DIR$/sample-config/midi-qol-rotv-manual.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/midi-qol-rotv.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/midi-qol-rotv.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/GMAction.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/GMAction.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/Hooks.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/Hooks.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/MidiKeyManager.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/MidiKeyManager.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/RollStats.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/RollStats.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/apps/ActorOnUseMacroConfig.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/apps/ActorOnUseMacroConfig.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/apps/ConfigPanel.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/apps/ConfigPanel.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/apps/Item.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/apps/Item.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/apps/LateTargeting.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/apps/RollStatsDisplay.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/apps/RollStatsDisplay.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/apps/SoundConfigPanel.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/apps/SoundConfigPanel.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/chatMesssageHandling.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/itemhandling.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/itemhandling.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/midi-sounds.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/midi-sounds.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/patching.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/patching.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/preloadTemplates.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/preloadTemplates.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/settings.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/settings.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/setupModules.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/setupModules.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/sheetQOL.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/sheetQOL.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/tests/setupTest.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/tests/setupTest.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/utils.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/utils.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/module/workflow.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/workflow.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/config.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/config.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/damage-results.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/damage-results.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/dialog.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/dialog.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/hits.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/hits.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/item-card-buttons.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/item-card-buttons.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/item-card.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/lateTargeting.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/midiProperties.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/roll.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/roll.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/rollAlternate.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/saves.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/saves.html" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="2kVhGOo8anfr3PhZEzFLERsHc12" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="settings.editor.selected.configurable" value="configurable.group.build" />
+  </component>
+  <component name="RunManager">
+    <configuration default="true" type="Application" factoryName="Application">
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JUnit" factoryName="JUnit">
+      <option name="TEST_OBJECT" value="class" />
+      <option name="WORKING_DIRECTORY" value="%MODULE_WORKING_DIR%" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="TestNG">
+      <option name="TEST_OBJECT" value="CLASS" />
+      <option name="WORKING_DIRECTORY" value="%MODULE_WORKING_DIR%" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a62c9d64-b07a-4b47-bbdc-b26e9932639d" name="Default Changelist" comment="" />
+      <created>1723374554215</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1723374554215</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="480" y="113" width="938" height="609" key="find.popup" timestamp="1723377983573">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="480" y="113" width="938" height="609" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1723377983573" />
+  </component>
+</project>

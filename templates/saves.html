@@ -1,28 +1,38 @@
-<div>
-  <div class="midi-qol-rotv-nobox midi-qol-rotv-saves-display">
-    <div class="midi-qol-rotv-bigger-text"><span>{{noDamage}}</span></div>
-    <div class="midi-qol-rotv-bigger-text"><span>{{fullDamage}}</span></div>
-    {{#each saves as |save iid|}}
-    <div class="midi-qol-rotv-flex-container">
-      <div class="midi-qol-rotv-target-npc-GM midi-qol-rotv-target-name" id={{save.id}}> {{save.gmName}}</div>
-      <div class="midi-qol-rotv-target-npc-Player midi-qol-rotv-target-name" id={{save.id}}> {{save.playerName}}</div>
-
-      <div>
-        <label style="{{save.saveStyle}}">
-        {{save.saveString}}
-        </label>
-        <div class="midi-qol-rotv-tooltip midi-qol-rotv-save-total">: {{save.rollTotal}}
-          <div class="midi-qol-rotv-tooltiptext midi-qol-rotv-save-tooltip" style="text-align: left;">
-            <div>{{save.rollDetail.formula}}</div>
-            <div>{{save.rollDetail.result}}</div>
-
+<div style="text-align: center">
+  <strong>{{{saveDisplayFlavor}}}</strong>
+</div>
+<div style="text-align: center">
+  <strong>
+    {{{fullDamageText}}} {{{halfDamageText}}} {{{noDamageText}}}
+  </strong>
+</div>
+<div class="rotv2 evaluation">
+  {{#each saves as |save iid|}}
+  <div>
+    <div class="midi-qol-rotv target midi-qol-rotv-save-class {{save.saveClass}}" style="align-content: center;">
+      <img src="{{save.img}}" style="background-color: var(--rotv-background-10);" />
+      <div class="name-stacked">
+        <span class="midi-qol-rotv-target-name title midi-qol-rotv-tooltip " id="{{save.target.id}}"
+          data-uuid="{{save.target.document.uuid}}">
+          <div class="midi-qol-rotv-gmTokenName">
+            {{{save.gmName}}}
           </div>
-        </div>
-
-        {{adv}}
+          <i class="midi-qol-rotv-save-symbol fas {{save.saveSymbol}}"></i>
+          <div class="midi-qol-rotv-playerTokenName">
+            {{save.playerName}}
+          </div>
+          <div class="midi-qol-rotv-tooltiptext midi-qol-rotv-save-tooltip" style="text-align: left;">
+            {{{save.rollHTML}}}
+<!--           <div>{{save.rollDetail.formula}}</div>
+            <div>{{save.rollDetail.result}}</div>
+-->
+          </div>
+        </span>
       </div>
-      <div><img src="{{save.img}}" height="30" style="border:0px"></div>
+      <div class="midi-qol-rotv-save-total {{save.saveTotalClass}}">
+        <span style="font-weight: bold;">{{save.rollTotal}}</span>
+      </div>
     </div>
-    {{/each}}
   </div>
+  {{/each}}
 </div>

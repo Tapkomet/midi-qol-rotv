@@ -20,24 +20,11 @@ const blankStat = {
 	damageTotal: 0
 };
 let blankStats = {
-	session: duplicate(blankStat),
-	lifetime: duplicate(blankStat),
+	session: foundry.utils.duplicate(blankStat),
+	lifetime: foundry.utils.duplicate(blankStat),
 	itemStats: {}
 };
 export class RollStats {
-	constructor() {
-		this.headerLine = `"Actor", "Item Name", "#Attacks", "# Nat20", "#Fumbles", "#Critical", "Attack Roll Dice Total", "Attack Roll Total", "Damage Rolls", "Total Damage Applied", "Damage Total"`;
-		game.settings.register("midi-qol-rotv", "RollStats", {
-			scope: "world",
-			default: {},
-			type: Object,
-			config: false,
-			onChange: fetchStats
-		});
-		//@ts-ignore
-		this.currentStats = game.settings.get("midi-qol-rotv", "RollStats");
-		this.rollCount = 0;
-	}
 	showStats() {
 		new RollStatsDisplay(this, { playersOnly: configSettings.playerStatsOnly }).render(true);
 	}
@@ -50,16 +37,16 @@ export class RollStats {
 				return null;
 			if (entity instanceof User && configSettings.playerStatsOnly && entity.isGM)
 				return null;
-			this.currentStats[id] = duplicate(blankStats);
+			this.currentStats[id] = foundry.utils.duplicate(blankStats);
 			this.currentStats[id].name = collection?.get(id)?.name;
 		}
 		else {
-			this.currentStats[id] = mergeObject(this.currentStats[id], blankStats, { overwrite: false, inplace: true, insertKeys: true, insertValues: true });
+			this.currentStats[id] = foundry.utils.mergeObject(this.currentStats[id], blankStats, { overwrite: false, inplace: true, insertKeys: true, insertValues: true });
 		}
 		return this.currentStats[id];
 	}
 	prepareStats() {
-		const stats = duplicate(this.currentStats);
+		const stats = foundry.utils.duplicate(this.currentStats);
 		Object.keys(stats).forEach(aid => {
 			const actStats = stats[aid];
 			const lifetime = actStats.lifetime;
@@ -81,20 +68,33 @@ export class RollStats {
 	}
 	getitemStats(item, id, collection) {
 		if (!item)
-			return duplicate(blankStat);
+			return foundry.utils.duplicate(blankStat);
 		let currentStats = this.getEntityStats(id, collection);
 		if (!currentStats)
 			return null;
 		if (!currentStats.itemStats[item.name]) {
-			currentStats.itemStats[item.name] = { name: item.name, session: duplicate(blankStat) };
+			currentStats.itemStats[item.name] = { name: item.name, session: foundry.utils.duplicate(blankStat) };
 		}
 		return currentStats.itemStats[item.name];
+	}
+	constructor() {
+		this.headerLine = `"Actor", "Item Name", "#Attacks", "# Nat20", "#Fumbles", "#Critical", "Attack Roll Dice Total", "Attack Roll Total", "Damage Rolls", "Total Damage Applied", "Damage Total"`;
+		game.settings.register("midi-qol-rotv", "RollStats", {
+			scope: "world",
+			default: {},
+			type: Object,
+			config: false,
+			onChange: fetchStats
+		});
+		//@ts-ignore
+		this.currentStats = game.settings.get("midi-qol-rotv", "RollStats");
+		this.rollCount = 0;
 	}
 	async endSession() {
 		if (!game.user?.isGM)
 			return;
 		Object.keys(this.currentStats).forEach(actorId => {
-			this.currentStats[actorId].session = duplicate(blankStat);
+			this.currentStats[actorId].session = foundry.utils.duplicate(blankStat);
 			this.currentStats[actorId].itemStats = {};
 		});
 		await game.settings.set("midi-qol-rotv", "RollStats", this.currentStats);
@@ -213,7 +213,7 @@ export class RollStats {
 		return `"${actorName}","${itemName}", ${stats.numAttacks || 0}, ${stats.numAttack20 || 0}, ${stats.numAttackFumble || 0}, ${stats.numAttackCritical || 0}, ${stats.attackRollsDiceTotal || 0}, ${stats.attackRollTotal || 0}, ${stats.numDamageRolls || 0}, ${stats.damageApplied || 0}, ${stats.damageTotal || 0}`;
 	}
 	exportToCSV() {
-		let csvText = duplicate(this.headerLine) + "\n";
+		let csvText = foundry.utils.duplicate(this.headerLine) + "\n";
 		for (let actorStats of Object.values(this.currentStats)) {
 			csvText += this.dumpStatLine(actorStats.name, "life time", actorStats.lifetime) + "\n";
 			csvText += this.dumpStatLine(actorStats.name, "Session", actorStats.session) + "\n";

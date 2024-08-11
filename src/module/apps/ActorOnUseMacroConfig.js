@@ -1,4 +1,5 @@
 import { geti18nOptions, i18n } from "../../midi-qol-rotv.js";
+import { Workflow } from "../workflow.js";
 import { getCurrentSourceMacros, OnUseMacros } from "./Item.js";
 export class ActorOnUseMacrosConfig extends FormApplication {
 	constructor(object, options) {
@@ -14,17 +15,18 @@ export class ActorOnUseMacrosConfig extends FormApplication {
 			closeOnSubmit: false,
 			submitOnClose: true,
 			resizable: false,
-			jQuery: true
+			jQuery: true,
+			dragDrop: [{ dropSelector: ".key" }]
 		});
 	}
 	async getData(options) {
 		let data = await super.getData(options);
-		data.onUseMacroName = getProperty(this.object._source, "flags.midi-qol-rotv.onUseMacroName");
+		data.onUseMacroName = foundry.utils.getProperty(this.object._source, "flags.midi-qol-rotv.onUseMacroName");
 		if (data.onUseMacroName !== undefined)
 			data.onUseMacroParts = new OnUseMacros(data.onUseMacroName);
 		else
 			data.onUseMacroParts = new OnUseMacros(null);
-		data.MacroPassOptions = geti18nOptions("onUseMacroOptions");
+		data.MacroPassOptions = foundry.utils.mergeObject(geti18nOptions("onUseMacroOptions"), Workflow.stateHooks);
 		return data;
 	}
 	async _updateObject(event, data) {
@@ -42,9 +44,19 @@ export class ActorOnUseMacrosConfig extends FormApplication {
 		return data;
 	}
 	activateListeners(html) {
+		super.activateListeners(html);
 		if (this.isEditable) {
 			html.find(".macro-control").click(this.onMacroControl.bind(this));
+			// html.find(".key").onDrop = ev => this._onDrop(ev);
 		}
+	}
+	_onDragStart(ev) { }
+	_onDrop(ev) {
+		ev.preventDefault();
+		//@ts-ignore
+		const data = TextEditor.getDragEventData(ev);
+		if (data.uuid)
+			ev.target.value += data.uuid;
 	}
 	async onMacroControl(event) {
 		event.preventDefault();

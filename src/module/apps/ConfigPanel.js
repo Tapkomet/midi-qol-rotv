@@ -1,11 +1,11 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js";
+import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js";
 import { configSettings } from "../settings.js";
-import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log } from "../../midi-qol-rotv.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig } from "../../midi-qol-rotv.js";
 import { installedModules } from "../setupModules.js";
 const PATH = "./modules/midi-qol-rotv/sample-config/";
 export class ConfigPanel extends FormApplication {
 	static get defaultOptions() {
-		return mergeObject(super.defaultOptions, {
+		return foundry.utils.mergeObject(super.defaultOptions, {
 			title: game.i18n.localize("midi-qol-rotv.ConfigTitle"),
 			template: "modules/midi-qol-rotv/templates/config.html",
 			id: "midi-qol-rotv-settings",
@@ -18,17 +18,20 @@ export class ConfigPanel extends FormApplication {
 	}
 	constructor(...args) {
 		super(args);
+		this.configHookId = Hooks.on("midi-qol-rotv.ConfigSettingsChanged", () => {
+			this.close({ force: true });
+		});
 	}
 	get title() {
 		return i18n("midi-qol-rotv.ConfigTitle");
 	}
 	async getData(options) {
 		if (!enableWorkflow) {
-			ui.notifications?.error("Worklow automation is not enabled");
+			ui.notifications?.error("Workflow automation is not enabled");
 		}
-		let wallsBlockRangeOptions = duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
-		let CoverCalculationOptions = duplicate(geti18nOptions("CoverCalculationOptions"));
-		[{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }].forEach(module => {
+		let wallsBlockRangeOptions = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
+		let CoverCalculationOptions = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
+		[{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
 			if (!installedModules.get(module.id)) {
 				wallsBlockRangeOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
 				CoverCalculationOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
@@ -37,10 +40,55 @@ export class ConfigPanel extends FormApplication {
 		if (!installedModules.get("levels")) {
 			wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
 		}
+		let HiddenAdvantageOptions = foundry.utils.duplicate(geti18nOptions("HiddenAdvantageOptions"));
+		[{ id: "perceptive", name: "Perceptive" }].forEach(module => {
+			if (!installedModules.get(module.id)) {
+				HiddenAdvantageOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+			}
+		});
 		let quickSettingsOptions = {};
 		for (let key of Object.keys(quickSettingsDetails)) {
 			quickSettingsOptions[key] = quickSettingsDetails[key].description;
 		}
+		if (configSettings.addWounded > 0 && ["none", undefined].includes(configSettings.addWoundedStyle))
+			configSettings.addWoundedStyle = "normal";
+		const AddWoundedOptions = foundry.utils.duplicate(geti18nOptions("AddDeadOptions"));
+		delete AddWoundedOptions["none"];
+		let rollNPCSavesOptions = foundry.utils.duplicate(geti18nOptions("rollNPCSavesOptions"));
+		for (let key of Object.keys(rollNPCSavesOptions)) {
+			switch (key) {
+				case "letme":
+				case "letmeQuery":
+					if (!installedModules.get("lmrtfy"))
+						rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "LMRTFY" })}`;
+					break;
+				case "mtb":
+					if (!installedModules.get("monks-tokenbar"))
+						rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+					break;
+				case "rer":
+					if (!installedModules.get("epic-rolls-RotV"))
+						rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+			}
+		}
+		let playerRollSavesOptions = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
+		for (let key of Object.keys(playerRollSavesOptions)) {
+			switch (key) {
+				case "letme":
+				case "letmeQuery":
+					if (!installedModules.get("lmrtfy"))
+						playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "LMRTFY" })}`;
+					break;
+				case "mtb":
+					if (!installedModules.get("monks-tokenbar"))
+						playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+					break;
+				case "rer":
+					if (!installedModules.get("epic-rolls-RotV"))
+						playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+			}
+		}
+		;
 		let data = {
 			QuickSettingsBlurb: geti18nOptions("QuickSettingsBlurb"),
 			configSettings,
@@ -60,47 +108,82 @@ export class ConfigPanel extends FormApplication {
 			damageImmunitiesOptions: geti18nOptions("damageImmunitiesOptions"),
 			showItemDetailsOptions: geti18nOptions("showItemDetailsOptions"),
 			doReactionsOptions: geti18nOptions("DoReactionsOptions"),
+			wallsBlockRangeOptions,
 			gmDoReactionsOptions: geti18nOptions("GMDoReactionsOptions"),
+			AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
 			rollOtherDamageOptions: geti18nOptions("RollOtherDamageOptions"),
 			showReactionAttackRollOptions: geti18nOptions("ShowReactionAttackRollOptions"),
-			wallsBlockRangeOptions,
 			CoverCalculationOptions,
-			AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
 			RecordAOOOptions: geti18nOptions("RecordAOOOptions"),
 			EnforceReactionsOptions: geti18nOptions("EnforceReactionsOptions"),
 			AutoEffectsOptions: geti18nOptions("AutoEffectsOptions"),
 			RequireMagicalOptions: geti18nOptions("RequireMagicalOptions"),
-			//@ts-ignore
-			itemTypeLabels: CONFIG.Item.typeLabels,
+			itemTypeLabels: Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc; }, {}),
 			hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
-			itemDeleteCheck,
 			hideRollDetailsOptions: geti18nOptions("hideRollDetailsOptions"),
 			checkFlankingOptions: geti18nOptions("CheckFlankingOptions"),
-			hideRollDetailsHint: i18n("midi-qol-rotv.HideRollDetails.HintLong"),
+			hideRollDetailsHint: geti18nOptions("HideRollDetails")?.HintLong ?? {},
 			nsaFlag,
 			coloredBorders,
-			playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? geti18nOptions("playerRollSavesOptionsReduced") : geti18nOptions("playerRollSavesOptions"),
-			rollNPCSavesOptions: geti18nOptions("rollNPCSavesOptions"),
+			playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? geti18nOptions("playerRollSavesOptionsReduced") : playerRollSavesOptions,
+			rollNPCSavesOptions,
 			//@ts-ignore .map undefined
 			customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc; }, {}) || {},
 			//@ts-ignore .sounds
 			customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id] = s.name; return acc; }, { "none": "" }),
 			rollSoundOptions: CONFIG.sounds,
-			isBetterRolls: installedModules.get("betterrolls5e"),
+			isBetterRolls: installedModules.get("betterrollsRotV"),
 			rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
 			ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions"),
 			AddDeadOptions: geti18nOptions("AddDeadOptions"),
-			LateTargetingOptions: geti18nOptions("LateTargetingOptions"),
-			RemoveConcentrationEffectsOptions: geti18nOptions("RemoveConcentrationEffectsOptions")
+			AddWoundedOptions,
+			AverageDamageOptions: geti18nOptions("AverageDamageOptions"),
+			TargetConfirmationOptions: geti18nOptions("TargetConfirmationOptions"),
+			RemoveConcentrationEffectsOptions: geti18nOptions("RemoveConcentrationEffectsOptions"),
+			CheckRangeOptions: geti18nOptions("CheckRangeOptions"),
+			InvisAdvantageOptions: geti18nOptions("InvisAdvantageOptions"),
+			HiddenAdvantageOptions,
+			ConfirmAttackDamageOptions: geti18nOptions("ConfirmAttackDamageOptions"),
+			ChallengeModeArmorOptions: geti18nOptions("ChallengeModeArmorOptions"),
+			RollSkillsBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.skills).reduce((acc, s) => { acc[s] = GameSystemConfig.skills[s].label; return acc; }, {})),
+			RollSavesBlindOptions: foundry.utils.mergeObject({ "all": "All", "death": i18n("ROTV.DeathSave") }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc; }, {})),
+			RollChecksBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc; }, {})),
+			midiPropertiesTabOptions: CONST.USER_ROLE_NAMES,
+			//@ts-expect-error
+			StatusEffectOptions: CONFIG.statusEffects.reduce((acc, se) => { let name = i18n(se.name ?? se.label); if (se.id.startsWith("Convenient Effect"))
+				name = `${name} (CE)`; acc[se.id] = name; return acc; }, { "none": "None" }),
+			SaveDROrderOptions: geti18nOptions("SaveDROrderOptions"),
+			ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc; }, { "Delete": "Delete" }),
+			DoConcentrationCheckOptions: geti18nOptions("DoConcentrationCheckOptions"),
+			rollModes: CONFIG.Dice.rollModes,
+			//@ts-expect-error
+			preV12: game.release.generation < 12
 		};
 		if (debugEnabled > 0)
 			warn("Config Panel: getData ", data);
 		return data;
 	}
+	_onSearch(term) {
+		for (let tag of [".midi-qol-rotv-box", ".form-group"]) {
+			const elts = Array.from(this.element[0].querySelectorAll(tag));
+			term = term.toLowerCase().trim();
+			elts.forEach((el) => {
+				//@ts-expect-error
+				if (!term || el.innerText.toLowerCase().includes(term)) {
+					//@ts-expect-error
+					el.style.display = null;
+				}
+				else {
+					//@ts-expect-error
+					el.style.display = "none";
+				}
+			});
+		}
+	}
 	activateListeners(html) {
 		html.find(".customSounds").change(() => {
 			configSettings.useCustomSounds = !configSettings.useCustomSounds;
-			this.render();
+			this.render(true);
 		});
 		html.find(".playlist").change(this._playList.bind(this));
 		super.activateListeners(html);
@@ -109,7 +192,7 @@ export class ConfigPanel extends FormApplication {
 		});
 		html.find(".optionalRulesEnabled").on("click", event => {
 			configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
-			this.render();
+			this.render(true);
 		});
 		html.find("#midi-qol-rotv-show-stats").on("click", event => {
 			gameStats.showStats();
@@ -117,14 +200,32 @@ export class ConfigPanel extends FormApplication {
 		html.find("#midi-qol-rotv-export-config").on("click", exportSettingsToJSON);
 		html.find("#midi-qol-rotv-import-config").on("click", async () => {
 			if (await importFromJSONDialog()) {
-				this.close();
+				this.close({ force: true });
 			}
 		});
+		html.find('.midi-qol-rotv-blind-select').hover(this.selectHover.bind(this), this.selectHoverOut.bind(this));
 		html.find(".import-quick-setting").on("click", async function (event) {
 			const key = event.currentTarget.id;
-			await applySettings.bind(this)(key);
-			this.render();
+			if (await applySettings.bind(this)(key))
+				this.close({ force: true });
+			// this.render();
 		}.bind(this));
+		//activate listeners
+		//@ts-expect-error
+		this.element[0].querySelector('input[type="search"]')?.addEventListener("input", (e) => { this._onSearch(e.currentTarget?.value); });
+	}
+	selectHover(event) {
+		const target = event.currentTarget;
+		target.focus();
+	}
+	selectHoverOut(event) {
+		const target = event.currentTarget;
+		target.blur();
+	}
+	close(options) {
+		if (this.configHookId)
+			Hooks.off("midi-qol-rotv.ConfigSettingsChanged", this.configHookId);
+		return super.close(options);
 	}
 	async _playList(event) {
 		event.preventDefault();
@@ -137,10 +238,10 @@ export class ConfigPanel extends FormApplication {
 		this.render(true);
 	}
 	async _updateObject(event, formData) {
-		formData = expandObject(formData);
+		formData = foundry.utils.expandObject(formData);
 		formData.itemTypeList = configSettings.itemTypeList;
-		let newSettings = mergeObject(configSettings, formData, { overwrite: true, inplace: false });
-		// const newSettings = mergeObject(configSettings, expand, {overwrite: true})
+		let newSettings = foundry.utils.mergeObject(configSettings, formData, { overwrite: true, inplace: false });
+		// const newSettings = foundry.utils.mergeObject(configSettings, expand, {overwrite: true})
 		if (game.user?.can("SETTINGS_MODIFY"))
 			game.settings.set("midi-qol-rotv", "ConfigSettings", newSettings);
 	}
@@ -148,7 +249,7 @@ export class ConfigPanel extends FormApplication {
 export class ItemTypeSelector extends FormApplication {
 	/** @override */
 	static get defaultOptions() {
-		return mergeObject(super.defaultOptions, {
+		return foundry.utils.mergeObject(super.defaultOptions, {
 			id: "midi-qol-rotv-item-selector",
 			classes: ["rotv"],
 			title: "Show Item Details",
@@ -176,11 +277,9 @@ export class ItemTypeSelector extends FormApplication {
 		if (!enableWorkflow) {
 			ui.notifications?.error("Worklow automation is not enabled");
 		}
-		// Get current values
-		configSettings.itemTypeList;
 		// Populate choices
 		//@ts-ignore
-		const choices = duplicate(CONFIG.Item.typeLabels);
+		const choices = Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc; }, {});
 		for (let [k, v] of Object.entries(choices)) {
 			choices[k] = {
 				label: i18n(v),
@@ -224,8 +323,7 @@ async function importFromJSONDialog() {
 						if (!form.data.files.length)
 							return ui.notifications?.error("You did not upload a data file!");
 						readTextFromFile(form.data.files[0]).then(json => {
-							importSettingsFromJSON(json);
-							resolve(true);
+							importSettingsFromJSON(json).then(() => resolve(true));
 						});
 					}
 				},
@@ -253,7 +351,7 @@ async function fetchConfigFile(filename) {
 	});
 }
 function showDiffs(current, changed, flavor = "", title = "") {
-	const diffs = diffObject(changed, current, { inner: true });
+	const diffs = foundry.utils.diffObject(changed, current, { inner: true });
 	const changes = [];
 	for (let key of Object.keys(diffs)) {
 		let name;
@@ -324,7 +422,7 @@ let quickSettingsDetails = {
 			gmAutoFastForwardAttack: true,
 			gmAutoFastForwardDamage: true,
 			gmRemoveButtons: "all",
-			gmLateTargeting: "none",
+			gmTargetConfirmation: "none",
 			autoItemEffects: "applyRemove",
 			allowUseMacro: true,
 		},
@@ -338,8 +436,18 @@ let quickSettingsDetails = {
 			gmAutoFastForwardAttack: false,
 			gmAutoFastForwardDamage: false,
 			gmRemoveButtons: "none",
-			gmLateTargeting: "none"
+			gmTargetConfirmation: "none"
 		},
+	},
+	ShowItemInfo: {
+		description: "Show Item Info in chat card",
+		shortDescription: "Show Item Info",
+		configSettings: {
+			showItemDetails: "all",
+		},
+		codeChecks: (current, settings) => {
+			settings.itemTypeList = Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key));
+		}
 	},
 	PlayerAuto: {
 		description: "Player Attack/Damage Roll: Automatic",
@@ -349,7 +457,7 @@ let quickSettingsDetails = {
 			autoRollDamage: "onHit",
 			autoFastForward: "all",
 			removeButtons: "all",
-			lateTargeting: "none"
+			targetConfirmation: "none"
 		},
 	},
 	PlayerManual: {
@@ -360,7 +468,7 @@ let quickSettingsDetails = {
 			autoRollDamage: "none",
 			autoFastForward: "none",
 			removeButtons: "none",
-			lateTargeting: "none"
+			targetConfirmation: "none"
 		},
 	},
 	DamageAuto: {
@@ -463,14 +571,10 @@ let quickSettingsDetails = {
 		shortDescription: "Enable Concentration Automation",
 		configSettings: {
 			removeConcentration: true,
-			concentrationAutomation: true,
 			singleConcentrationRoll: true,
 		},
 		codeChecks: (current, settings) => {
-			if (installedModules.get("combat-utility-belt") && game.settings.get("combat-utility-belt", "enableConcentrator")) {
-				ui.notifications?.warn("`Combat Utility Belt Concentration' is not compatible with midi-qol-rotv concentration. CUB concentration has been disabled");
-				game.settings.set("combat-utility-belt", "enableConcentrator", false);
-			}
+			game.settings.set(game.system.id, "disableConcentation", false);
 		}
 	},
 	NoDamageApplication: {
@@ -488,9 +592,11 @@ let quickSettingsDetails = {
 		shortDescription: "Disable Concentration Automation",
 		configSettings: {
 			removeConcentration: false,
-			concentrationAutomation: false,
 			singleConcentrationRoll: false,
 		},
+		codeChecks: (current, settings) => {
+			game.settings.set(game.system.id, "disableConcentation", true);
+		}
 	},
 	SecretSquirrel: {
 		description: "Secret Squirrel: Hide most GM roll info from players",
@@ -510,8 +616,8 @@ let quickSettingsDetails = {
 				settings.autoCheckHit = "whisper";
 			if (current.autoCheckSaves !== "none")
 				settings.autoCheckSaves = "whisper";
-			if (!installedModules.get("combat-utility-belt"))
-				ui.notifications?.warn("'Combat Utility Belt' is recommended to hide creature names for normal rotv rolls");
+			if (!installedModules.get("anonymous"))
+				ui.notifications?.warn("'Anonymous' is recommended to hide creature names for normal rotv rolls");
 		}
 	},
 	FullDisclosure: {
@@ -539,13 +645,14 @@ export async function applySettings(key) {
 	let settingsToApply = {};
 	const config = quickSettingsDetails[key];
 	if (config.configSettings) {
-		settingsToApply = duplicate(config.configSettings);
+		settingsToApply = foundry.utils.duplicate(config.configSettings);
 		if (config.codeChecks)
 			config.codeChecks(configSettings, settingsToApply);
 		if (await showDiffs(configSettings, settingsToApply, "", config.shortDescription)) {
-			settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
+			settingsToApply = foundry.utils.mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
 			if (game.user?.can("SETTINGS_MODIFY"))
 				game.settings.set("midi-qol-rotv", "ConfigSettings", settingsToApply);
+			return true;
 		}
 	}
 	else if (config.fileName) {
@@ -555,13 +662,161 @@ export async function applySettings(key) {
 			if (await showDiffs(configSettings, configData.configSettings, "", config.shortDescription)) {
 				importSettingsFromJSON(jsonText);
 			}
-			return;
+			return true;
 		}
 		catch (err) {
 			error("could not load config file", config.fileName, err);
 		}
 		log(`Loaded ${config.fileName} version ${config.version}`);
 	}
-	else
-		return;
+	return false;
 }
+const colorList = [
+	`AliceBlue`,
+	`AntiqueWhite`,
+	`Aqua`,
+	`Aquamarine`,
+	`Azure`,
+	`Beige`,
+	`Bisque`,
+	`Black`,
+	`BlanchedAlmond`,
+	`Blue`,
+	`BlueViolet`,
+	`Brown`,
+	`BurlyWood`,
+	`CadetBlue`,
+	`Chartreuse`,
+	`Chocolate`,
+	`Coral`,
+	`CornflowerBlue`,
+	`Cornsilk`,
+	`Crimson`,
+	`Cyan`,
+	`DarkBlue`,
+	`DarkCyan`,
+	`DarkGoldenRod`,
+	`DarkGray`,
+	`DarkGrey`,
+	`DarkGreen`,
+	`DarkKhaki`,
+	`DarkMagenta`,
+	`DarkOliveGreen`,
+	`Darkorange`,
+	`DarkOrchid`,
+	`DarkRed`,
+	`DarkSalmon`,
+	`DarkSeaGreen`,
+	`DarkSlateBlue`,
+	`DarkSlateGray`,
+	`DarkSlateGrey`,
+	`DarkTurquoise`,
+	`DarkViolet`,
+	`DeepPink`,
+	`DeepSkyBlue`,
+	`DimGray`,
+	`DimGrey`,
+	`DodgerBlue`,
+	`FireBrick`,
+	`FloralWhite`,
+	`ForestGreen`,
+	`Fuchsia`,
+	`Gainsboro`,
+	`GhostWhite`,
+	`Gold`,
+	`GoldenRod`,
+	`Gray`,
+	`Grey`,
+	`Green`,
+	`GreenYellow`,
+	`HoneyDew`,
+	`HotPink`,
+	`IndianRed`,
+	`Indigo`,
+	`Ivory`,
+	`Khaki`,
+	`Lavender`,
+	`LavenderBlush`,
+	`LawnGreen`,
+	`LemonChiffon`,
+	`LightBlue`,
+	`LightCoral`,
+	`LightCyan`,
+	`LightGoldenRodYellow`,
+	`LightGray`,
+	`LightGrey`,
+	`LightGreen`,
+	`LightPink`,
+	`LightSalmon`,
+	`LightSeaGreen`,
+	`LightSkyBlue`,
+	`LightSlateGray`,
+	`LightSlateGrey`,
+	`LightSteelBlue`,
+	`LightYellow`,
+	`Lime`,
+	`LimeGreen`,
+	`Linen`,
+	`Magenta`,
+	`Maroon`,
+	`MediumAquaMarine`,
+	`MediumBlue`,
+	`MediumOrchid`,
+	`MediumPurple`,
+	`MediumSeaGreen`,
+	`MediumSlateBlue`,
+	`MediumSpringGreen`,
+	`MediumTurquoise`,
+	`MediumVioletRed`,
+	`MidnightBlue`,
+	`MintCream`,
+	`MistyRose`,
+	`Moccasin`,
+	`NavajoWhite`,
+	`Navy`,
+	`OldLace`,
+	`Olive`,
+	`OliveDrab`,
+	`Orange`,
+	`OrangeRed`,
+	`Orchid`,
+	`PaleGoldenRod`,
+	`PaleGreen`,
+	`PaleTurquoise`,
+	`PaleVioletRed`,
+	`PapayaWhip`,
+	`PeachPuff`,
+	`Peru`,
+	`Pink`,
+	`Plum`,
+	`PowderBlue`,
+	`Purple`,
+	`Red`,
+	`RosyBrown`,
+	`RoyalBlue`,
+	`SaddleBrown`,
+	`Salmon`,
+	`SandyBrown`,
+	`SeaGreen`,
+	`SeaShell`,
+	`Sienna`,
+	`Silver`,
+	`SkyBlue`,
+	`SlateBlue`,
+	`SlateGray`,
+	`SlateGrey`,
+	`Snow`,
+	`SpringGreen`,
+	`SteelBlue`,
+	`Tan`,
+	`Teal`,
+	`Thistle`,
+	`Tomato`,
+	`Turquoise`,
+	`Violet`,
+	`Wheat`,
+	`White`,
+	`WhiteSmoke`,
+	`Yellow`,
+	`YellowGreen`,
+];

@@ -15,9 +15,8 @@
   </nav>
   <section id="config-tabs" class="content">
     <!-- GM Tab -->
-    <div class="tab" data-tab="gm" data-group="sections">
+    <div class="tab midi-scrollable-list" data-tab="gm" data-group="sections">
       <div class="midi-qol-rotv-box">
-
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoAttack.Name"}}</label>
           <input type="checkbox" name="gmAutoAttack" data-dtype="Boolean" {{checked configSettings.gmAutoAttack}} />
@@ -26,26 +25,11 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ConsumeResource.Name"}}</label>
           <select name="gmConsumeResource" data-dtype="String">
-            {{#select configSettings.gmConsumeResource}}
-            {{#each ConsumeResourceOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions ConsumeResourceOptions selected=configSettings.gmConsumeResource}}
           </select>
-        </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ConsumeResource.Hint"}}</div>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ConsumeResource.Hint"}}}</div>
 
-        <div class="form-group">
-          <label>{{localize "midi-qol-rotv.LateTargeting.Name"}}</label>
-          <select name="gmLateTargeting" data-dtype="String">
-            {{#select configSettings.gmLateTargeting}}
-            {{#each LateTargetingOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.LateTargeting.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoFastForwardAttack.Name"}}</label>
@@ -56,13 +40,10 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoDamage.Name"}}</label>
           <select name="gmAutoDamage" data-dtype="String">
-            {{#select configSettings.gmAutoDamage}}
-            {{#each autoRollDamageOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions autoRollDamageOptions selected=configSettings.gmAutoDamage}}
           </select>
         </div>
+
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoFastForwardDamage.Name"}}</label>
           <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked
@@ -70,34 +51,32 @@
         </div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol-rotv.AverageDamage.Name"}}</label>
+          <select name="averageDamage" data-dtype="String">
+            {{selectOptions AverageDamageOptions selected=configSettings.averageDamage}}
+          </select>
+        </div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol-rotv.RemoveButtons.Name"}}</label>
           <select name="gmRemoveButtons" data-dtype="String">
-            {{#select configSettings.gmRemoveButtons}}
-            {{#each removeButtonsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions removeButtonsOptions selected=configSettings.gmRemoveButtons}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.HideRollDetails.Name"}}</label>
           <select name="hideRollDetails" data-dtype="String">
-            {{#select configSettings.hideRollDetails}}
-            {{#each hideRollDetailsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions hideRollDetailsOptions selected=configSettings.hideRollDetails}}
           </select>
+          <ul>
+            {{#each hideRollDetailsHint as |label val|}}
+            <li class="notes midi-qol-rotv-faint">
+              {{{label}}}
+            </li>
+            {{/each}}
+          </ul>
         </div>
-        <div>{{localize "midi-qol-rotv.HideRollDetails.Hint"}}</div>
-        <ul>
-          {{#each hideRollDetailsHint as |label val|}}
-          <li>
-            <div class="midi-qol-rotv-faint">{{label}}</div>
-          </li>
-          {{/each}}
-        </ul>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.GMHide3dDice.Name"}}</label>
@@ -107,9 +86,13 @@
           <label>{{localize "midi-qol-rotv.GhostRolls.Name"}}</label>
           <input type="checkbox" name="ghostRolls" data-dtype="Boolean" {{checked configSettings.ghostRolls}} />
         </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.AddFakeDice.Name"}}</label>
+          <input type="checkbox" name="addFakeDice" data-dtype="Boolean" {{checked configSettings.addFakeDice}} />
+        </div>
       </div>
-
     </div>
+
     <!-- Player Tab -->
     <div class="tab" data-tab="player" data-group="sections">
       <div class="midi-qol-rotv-box">
@@ -122,97 +105,89 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ConsumeResource.Name"}}</label>
           <select name="consumeResource" data-dtype="String">
-            {{#select configSettings.consumeResource}}
-            {{#each ConsumeResourceOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions ConsumeResourceOptions selected=configSettings.consumeResource}}
           </select>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ConsumeResource.Hint"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ConsumeResource.Hint"}}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoDamage.Name"}}</label>
           <select name="autoRollDamage" data-dtype="String">
-            {{#select configSettings.autoRollDamage}}
-            {{#each autoRollDamageOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions autoRollDamageOptions selected=configSettings.autoRollDamage}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoFastForward.Name"}}</label>
           <select name="autoFastForward" data-dtype="String">
-            {{#select configSettings.autoFastForward}}
-            {{#each clickOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions clickOptions selected=configSettings.autoFastForward}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RemoveButtons.Name"}}</label>
           <select name="removeButtons" data-dtype="String">
-            {{#select configSettings.removeButtons}}
-            {{#each removeButtonsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions removeButtonsOptions selected=configSettings.removeButtons}}
           </select>
         </div>
 
       </div>
 
     </div>
+
     <!-- Workflow Tab -->
-    <div class="tab" data-tab="workflow" data-group="sections">
+    <div class="tab midi-scrollable-list" data-tab="workflow" data-group="sections">
       <!-- Targeting-->
       <div class="midi-qol-rotv-box"> {{ localize "midi-qol-rotv.Targeting"}}
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoTarget.Name"}}</label>
           <select name="autoTarget" data-dtype="String">
-            {{#select configSettings.autoTarget}}
-            {{#each autoTargetOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions autoTargetOptions selected=configSettings.autoTarget}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AutoTarget.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoTarget.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoRemoveTemplate.Name"}}</label>
           <input id="autoRemoveTemplate" type="checkbox" name="autoRemoveTemplate" data-dtype="Boolean" {{checked
             configSettings.autoRemoveTemplate}} />
         </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.AutoRemoveInstantaneousTemplate.Name"}}</label>
+          <input id="autoRemoveInstantaneousTemplate" type="checkbox" name="autoRemoveInstantaneousTemplate" data-dtype="Boolean" {{checked
+            configSettings.autoRemoveInstantaneousTemplate}} />
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AutoInstantaneousRemoveTemplate.Hint"}}}</div>
+        </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.AutoRemoveSummonedCreature.Name"}}</label>
+          <input id="autoRemoveSummonedCreature" type="checkbox" name="autoRemoveSummonedCreature" data-dtype="Boolean"
+            {{checked configSettings.autoRemoveSummonedCreature}} />
+        </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RangeTarget.Name"}}</label>
           <select name="rangeTarget" data-dtype="String">
-            {{#select configSettings.rangeTarget}}
-            {{#each rangeTargetOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions rangeTargetOptions selected=configSettings.rangeTarget}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RangeTarget.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RangeTarget.Hint"}}</div>
 
-        <div class="form-group">
-          <label>{{localize "midi-qol-rotv.RequiresTargets.Name"}}</label>
-          <select name="requiresTargets" data-dtype="String">
-            {{#select configSettings.requiresTargets}}
-            {{#each requiresTargetsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
+        <div class="midi-qol-rotv-box">
+          <div class="form-group">
+            <label>{{localize "midi-qol-rotv.RequiresTargets.Name"}}</label>
+            <select name="requiresTargets" data-dtype="String">
+              {{selectOptions requiresTargetsOptions selected=configSettings.requiresTargets}}
+            </select>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RequiresTargets.Hint"}}}</div>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol-rotv.EnforceSingleWeaponTarget.Name"}}</label>
+            <input id="enforceSingleWeaponTarget" type="checkbox" name="enforceSingleWeaponTarget" data-dtype="Boolean"
+              {{checked configSettings.enforceSingleWeaponTarget}} />
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.EnforceSingleWeaponTarget.Hint"}}}</div>
+          </div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RequiresTargets.Hint"}}</div>
-
       </div>
       <!-- Specials -->
       <div class="midi-qol-rotv-box"> {{ localize "midi-qol-rotv.Special"}}
@@ -220,34 +195,20 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoEffects.Name"}}</label>
           <select name="autoItemEffects" data-dtype="String">
-            {{#select configSettings.autoItemEffects}}
-            {{#each AutoEffectsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions AutoEffectsOptions selected=configSettings.autoItemEffects}}
           </select>
+          <p class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AutoEffects.Hint"}}}</p>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoEffects.Hint"}}</div>
 
         {{#if hasConvenientEffects}}
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoCEEffects.Name"}}</label>
           <select name="autoCEEffects" data-dtype="String">
-            {{#select configSettings.autoCEEffects}}
-            {{#each AutoCEEffectsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions AutoCEEffectsOptions selected=configSettings.autoCEEffects}}
           </select>
+          <p class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AutoCEEffects.Hint"}}}</p>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoCEEffects.Hint"}}</div>
-        {{#if false}}
-        <div class="form-group">
-          <label>{{localize "midi-qol-rotv.AutoCEEffects.Name"}}</label>
-          <input type="checkbox" name="autoCEEffects" data-dtype="Boolean" {{checked configSettings.autoCEEffects}} />
-        </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoCEEffects.Hint"}}</div>
-        {{/if}}
+
         {{/if}}
 
         {{#if false}}
@@ -255,8 +216,9 @@
           <label>{{localize "midi-qol-rotv.ItemRollStartWorkflow.Name"}}</label>
           <input type="checkbox" name="itemRollStartWorkflow" data-dtype="Boolean" {{checked
             configSettings.itemRollStartWorkflow}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ItemRollStartWorkflow.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ItemRollStartWorkflow.Hint"}}</div>
+
         {{/if}}
       </div>
 
@@ -265,14 +227,10 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoCheckHit.Name"}}</label>
           <select name="autoCheckHit" data-dtype="String">
-            {{#select configSettings.autoCheckHit}}
-            {{#each autoCheckHitOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions autoCheckHitOptions selected=configSettings.autoCheckHit}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AutoCheckHit.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoCheckHit.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AttackPerTarget.Name"}}</label>
@@ -292,20 +250,16 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.AutoCheckSaves.Name"}}</label>
           <select name="autoCheckSaves" data-dtype="String">
-            {{#select configSettings.autoCheckSaves}}
-            {{#each autoCheckSavesOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoCheckSaves.Hint"}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoCheckSaves.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.DisplaySaveDC.Name"}}</label>
           <input type="checkbox" name="displaySaveDC" data-dtype="Boolean" {{checked configSettings.displaySaveDC}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.DisplaySaveDC.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.DisplaySaveDC.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.DisplaySaveAdvantage.Name"}}</label>
@@ -316,55 +270,43 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.CheckSaveText.Name"}}</label>
           <input type="checkbox" name="checkSaveText" data-dtype="Boolean" {{checked configSettings.checkSaveText}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.CheckSaveText.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.CheckSaveText.Hint"}}</div>
 
         <div class="form-group flexrow">
           <label style="width:100%; flex-grow:10;">{{localize "midi-qol-rotv.DefaultSaveMult.Name"}}</label>
           <input style="width:10%; flex-shrink:20;" type="number" step="any" name="defaultSaveMult"
             value="{{configSettings.defaultSaveMult}}" />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.DefaultSaveMult.Hint"}}}</div>
         </div>
 
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.DefaultSaveMult.Hint"}}</div>
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.PlayerRollSaves.Name"}}</label>
           <select name="playerRollSaves" data-dtype="String">
-            {{#select configSettings.playerRollSaves}}
-            {{#each playerRollSavesOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions playerRollSavesOptions selected=configSettings.playerRollSaves}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.PlayerRollSaves.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.PlayerRollSaves.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.rollNPCSaves.Name"}}</label>
           <select name="rollNPCSaves" data-dtype="String">
-            {{#select configSettings.rollNPCSaves}}
-            {{#each rollNPCSavesOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions rollNPCSavesOptions selected=configSettings.rollNPCSaves}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.rollNPCLinkedSaves.Name"}}</label>
           <select name="rollNPCLinkedSaves" data-dtype="String">
-            {{#select configSettings.rollNPCLinkedSaves}}
-            {{#each rollNPCSavesOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions rollNPCSavesOptions selected=configSettings.rollNPCLinkedSaves}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.rollNPCSaves.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.rollNPCSaves.Hint"}}</div>
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.PlayerSaveTimeout.Name"}}</label>
           <input type="number" name="playerSaveTimeout" value="{{configSettings.playerSaveTimeout}}" />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.PlayerSaveTimeout.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.PlayerSaveTimeout.Hint"}}</div>
       </div>
 
       <!-- Damage -->
@@ -375,32 +317,31 @@
           <label>{{localize "midi-qol-rotv.PromptDamageRoll.Name"}}</label>
           <input type="checkbox" name="promptDamageRoll" data-dtype="Boolean" {{checked
             configSettings.promptDamageRoll}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.PromptDamageRoll.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.PromptDamageRoll.Hint"}}</div>
 
         <div class="midi-qol-rotv-box">
           <div class="form-group">
             <label>{{localize "midi-qol-rotv.AutoApplyDamage.Name"}}</label>
             <select name="autoApplyDamage" data-dtype="String">
-              {{#select configSettings.autoApplyDamage}}
-              {{#each autoApplyDamageOptions as |label val|}}
-              <option value="{{val}}">{{label}}</option>
-              {{/each}}
-              {{/select}}
+              {{selectOptions autoApplyDamageOptions selected=configSettings.autoApplyDamage}}
             </select>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol-rotv.v3DamageApplication.Name"}}</label>
+            <input type="checkbox" name="v3DamageApplication" data-dtype="Boolean" {{checked
+              configSettings.v3DamageApplication}} />
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.v3DamageApplication.Hint"}}}</div>
           </div>
 
           <div class="form-group">
             <label>{{localize "midi-qol-rotv.PlayerDamageCard.Name"}}</label>
             <select name="playerDamageCard" data-dtype="String">
-              {{#select configSettings.playerDamageCard}}
-              {{#each playerDamageCardOptions as |label val|}}
-              <option value="{{val}}">{{label}}</option>
-              {{/each}}
-              {{/select}}
+              {{selectOptions playerDamageCardOptions selected=configSettings.playerDamageCard}}
             </select>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.PlayerDamageCard.Hint"}}}</div>
           </div>
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.PlayerDamageCard.Hint"}}</div>
 
           <div class="form-group">
             <label>{{localize "midi-qol-rotv.PlayerCardDamageDifferent.Name"}}</label>
@@ -412,14 +353,10 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.DamageImmunities.Name"}}</label>
           <select name="damageImmunities" data-dtype="String">
-            {{#select configSettings.damageImmunities}}
-            {{#each damageImmunitiesOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions damageImmunitiesOptions selected=configSettings.damageImmunities}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.DamageImmunities.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.DamageImmunities.Hint"}}</div>
 
         <div class="form-group flexrow">
           <label style="width:100%; flex-grow:10;">{{localize "midi-qol-rotv.DamageImmunityMultiplier.Name"}}</label>
@@ -440,124 +377,111 @@
         </div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol-rotv.SaveDROrder.Name"}}</label>
+          <select name="saveDROrder" data-dtype="String">
+            {{selectOptions SaveDROrderOptions selected=configSettings.saveDROrder}}
+          </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.SaveDROrder.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol-rotv.RequireMagical.Name"}}</label>
           <select name="requireMagical" data-dtype="String">
-            {{#select configSettings.requireMagical}}
-            {{#each RequireMagicalOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions RequireMagicalOptions selected=configSettings.requireMagical}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RequireMagical.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RequireMagical.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RollOtherDamage.Name"}}</label>
           <select name="rollOtherDamage" data-dtype="String">
-            {{#select configSettings.rollOtherDamage}}
-            {{#each rollOtherDamageOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions rollOtherDamageOptions selected=configSettings.rollOtherDamage}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RollOtherSpellDamage.Name"}}</label>
           <select name="rollOtherSpellDamage" data-dtype="String">
-            {{#select configSettings.rollOtherSpellDamage}}
-            {{#each rollOtherDamageOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions rollOtherDamageOptions selected=configSettings.rollOtherSpellDamage}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RollOtherDamage.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RollOtherDamage.Hint"}}</div>
-
-
       </div>
-
-
     </div>
+
     <!-- Concentration tab-->
     <div class="tab" data-tab="concentration" data-group="sections">
       <!-- Concentration-->
       <div class="midi-qol-rotv-box">
         <div class="form-group">
-          <label>{{localize "midi-qol-rotv.ConcentrationAutomation.Name"}}</label>
-          <input type="checkbox" name="concentrationAutomation" data-dtype="Boolean" {{checked
-            configSettings.concentrationAutomation}} />
+          <label>{{localize "midi-qol-rotv.DoConcentrationCheck.Name"}}</label>
+          <select name="doConcentrationCheck" data-dtype="String">
+            {{selectOptions DoConcentrationCheckOptions selected=configSettings.doConcentrationCheck}}
+          </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.DoConcentrationCheck.Hint"}}}</div>
         </div>
-
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RemoveConcentration.Name"}}</label>
           <input type="checkbox" name="removeConcentration" data-dtype="Boolean" {{checked
             configSettings.removeConcentration}} />
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RemoveConcentration.Hint"}}</div>
-
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.ConcentrationIncapacitatedConditionCheck.Name"}}</label>
+          <input type="checkbox" name="concentrationIncapacitatedConditionCheck" data-dtype="Boolean" {{checked
+            configSettings.concentrationIncapacitatedConditionCheck}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ConcentrationIncapacitatedConditionCheck.Hint"}}}
+          </div>
+        </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.SingleConcentrationRoll.Name"}}</label>
           <input type="checkbox" name="singleConcentrationRoll" data-dtype="Boolean" {{checked
             configSettings.singleConcentrationRoll}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.SingleConcentrationRoll.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.SingleConcentrationRoll.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.TempHPDamageConcentrationCheck.Name"}}</label>
           <input type="checkbox" name="tempHPDamageConcentrationCheck" data-dtype="Boolean" {{checked
             configSettings.tempHPDamageConcentrationCheck}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.TempHPDamageConcentrationCheck.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.TempHPDamageConcentrationCheck.Hint"}}</div>
-
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RemoveConcentrationEffects.Name"}}</label>
           <select name="removeConcentrationEffects" data-dtype="String">
-            {{#select configSettings.removeConcentrationEffects}}
-            {{#each RemoveConcentrationEffectsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions RemoveConcentrationEffectsOptions selected=configSettings.removeConcentrationEffects}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RemoveConcentrationEffects.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RemoveConcentrationEffects.Hint"}}</div>
       </div>
     </div>
+
     <!-- Reactions tab-->
     <div class="tab" data-tab="reactions" data-group="sections">
       <div class="midi-qol-rotv-box">
         <h4>{{localize "midi-qol-rotv.Reaction.Title"}}</h4>
         {{localize "midi-qol-rotv.Reactions"}}
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.DoReactions.Hint"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.DoReactions.Hint"}}}</div>
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.DoReactions.Name"}}</label>
           <select name="doReactions" data-dtype="String">
-            {{#select configSettings.doReactions}}
-            {{#each doReactionsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions doReactionsOptions selected=configSettings.doReactions}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.GMDoReactions.Name"}}</label>
           <select name="gmDoReactions" data-dtype="String">
-            {{#select configSettings.gmDoReactions}}
-            {{#each gmDoReactionsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions gmDoReactionsOptions selected=configSettings.gmDoReactions}}
           </select>
         </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ReactionTimeout.Name"}}</label>
           <input type="number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}" />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ReactionTimeout.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ReactionTimeout.Hint"}}</div>
 
         <div class="form-group ShowReactionChatMessage">
           <label>{{localize "midi-qol-rotv.ShowReactionChatMessage.Name"}}</label>
@@ -568,11 +492,7 @@
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ShowReactionAttackRoll.Name"}}</label>
           <select name="showReactionAttackRoll" data-dtype="String">
-            {{#select configSettings.showReactionAttackRoll}}
-            {{#each showReactionAttackRollOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions showReactionAttackRollOptions selected=configSettings.showReactionAttackRoll}}
           </select>
         </div>
 
@@ -580,84 +500,109 @@
           <label>{{localize "midi-qol-rotv.IgnoreSpellReactionRestriction.Name"}}</label>
           <input id="ignoreSpellReactionRestriction" type="checkbox" name="ignoreSpellReactionRestriction"
             data-dtype="Boolean" {{checked configSettings.ignoreSpellReactionRestriction}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.IgnoreSpellReactionRestriction.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.IgnoreSpellReactionRestriction.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.EnforceReactions.Name"}}</label>
           <select name="enforceReactions" data-dtype="String">
-            {{#select configSettings.enforceReactions}}
-            {{#each EnforceReactionsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions EnforceReactionsOptions selected=configSettings.enforceReactions}}
           </select>
         </div>
+
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.EnforceBonusActions.Name"}}</label>
           <select name="enforceBonusActions" data-dtype="String">
-            {{#select configSettings.enforceBonusActions}}
-            {{#each EnforceReactionsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions EnforceReactionsOptions selected=configSettings.enforceBonusActions}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.EnforceReactions.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.EnforceReactions.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.RecordAOO.Name"}}</label>
           <select name="recordAOO" data-dtype="String">
-            {{#select configSettings.recordAOO}}
-            {{#each RecordAOOOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions RecordAOOOptions selected=configSettings.recordAOO}}
           </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RecordAOO.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RecordAOO.Hint"}}</div>
       </div>
     </div>
 
-    <!-- Optional mechanics-->
-    <div class="tab" data-tab="game-mechanics" data-group="sections">
+    <!-- Mechanics Tab-->
+    <div class="tab midi-scrollable-list" data-tab="game-mechanics" data-group="sections">
       <div class="midi-qol-rotv-box">
-
         <div class="form-group">
-          <span>
-            <label>{{localize "midi-qol-rotv.AddWounded.Name"}}</label>
+          <div class="flexrow 5">
+            <label style="flex-grow: 2">{{localize "midi-qol-rotv.AddWounded.Name"}}</label>
             <input type="number" style="width:40px;" name="addWounded" value="{{configSettings.addWounded}}" />
-          </span>
+            <select name="midiWoundedCondition" data-dtype="String">
+              {{selectOptions StatusEffectOptions selected=configSettings.midiWoundedCondition}}
+            </select>
+            <select name="addWoundedStyle" data-dtype="String">
+              {{selectOptions AddDeadOptions selected=configSettings.addWoundedStyle}}
+            </select>
+          </div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AddWounded.Hint"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.AddWounded.Hint"}}</div>
 
-        {{#if false}}
-        <div class="form-group">
-          <label>{{localize "midi-qol-rotv.AddDead.Name"}}</label>
-          <input type="checkbox" name="addDead" data-dtype="Boolean" {{checked configSettings.addDead}} />
+        <div class="flexrow 5">
+          <label style="flex-grow: 2"> </label>
+          <label style="flex-grow: 1">{{localize "midi-qol-rotv.AddDead.Hint1"}}</label>
+          <label style="flex-grow: 1">{{localize "midi-qol-rotv.AddDead.Hint2"}}</label>
+          <label style="flex-grow: 1"> </label>
         </div>
-        {{/if}}
-
         <div class="form-group">
-          <label>{{localize "midi-qol-rotv.AddDead.Name"}}</label>
-          <select name="addDead" data-dtype="String">
-            {{#select configSettings.addDead}}
-            {{#each AddDeadOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
+          <div class="flexrow 5">
+            <label style="flex-grow: 2">{{localize "midi-qol-rotv.AddDead.Name"}}</label>
+            <select name="midiUnconsciousCondition" data-dtype="String">
+              {{selectOptions StatusEffectOptions selected=configSettings.midiUnconsciousCondition}}
+            </select>
+            <select name="midiDeadCondition" data-dtype="String">
+              {{selectOptions StatusEffectOptions selected=configSettings.midiDeadCondition}}
+            </select>
+            <select name="addDead" data-dtype="String">
+              {{selectOptions AddDeadOptions selected=configSettings.addDead}}
+            </select>
+          </div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AddDead.Hint"}}</div>
       </div>
 
+      <div class="midi-qol-rotv-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.RollChecksBlind.Name"}}</label>
+          <multi-select class="midi-qol-rotv-blind-select" name="rollChecksBlind">
+            {{selectOptions RollChecksBlindOptions selected=configSettings.rollChecksBlind}}
+            {{#each rollChecksBlind}}
+            <option value "{{id}}" {{selected id ../configSettings.rollChecksBlind.id}}>{{name}}</option>
+            {{/each}}
+          </multi-select>
+        </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.RollSavesBlind.Name"}}</label>
+          <multi-select class="midi-qol-rotv-blind-select" name="rollSavesBlind">
+            {{selectOptions RollSavesBlindOptions selected=configSettings.rollSavesBlind}}
+            {{#each rollSavesBlind}}
+            <option value "{{id}}" {{selected id ../configSettings.rollSavesBlind.id}}>{{name}}</option>
+            {{/each}}
+          </multi-select>
+        </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.RollSkillsBlind.Name"}}</label>
+          <multi-select class="midi-qol-rotv-blind-select" name="rollSkillsBlind">
+            {{selectOptions RollSkillsBlindOptions selected=configSettings.rollSkillsBlind}}
+            {{#each rollSkillsBlind}}
+            <option value "{{id}}" {{selected id ../configSettings.rollSkillsBlind.id}}>{{name}}</option>
+            {{/each}}
+          </multi-select>
+        </div>
+      </div>
       <div class="midi-qol-rotv-box">
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ActionSpecialDurationImmediate.Name"}}</label>
           <input type="checkbox" name="optionalRules.actionSpecialDurationImmediate" data-dtype="Boolean" {{checked
             configSettings.optionalRules.actionSpecialDurationImmediate}} />
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.ActionSpecialDurationImmediate.Hint"}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ActionSpecialDurationImmediate.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.Incapacitated.Name"}}</label>
@@ -669,39 +614,50 @@
       <div class="midi-qol-rotv-box">
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.CheckRange.Name"}}</label>
-          <input type="checkbox" name="optionalRules.checkRange" data-dtype="Boolean" {{checked
-            configSettings.optionalRules.checkRange}} />
-        </div>
-
-        <div class="form-group">
-          <label>{{localize "midi-qol-rotv.WallsBlockRange.Name"}}</label>
-          <select name="optionalRules.wallsBlockRange" data-dtype="String">
-            {{#select configSettings.optionalRules.wallsBlockRange}}
-            {{#each wallsBlockRangeOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+          <select name="optionalRules.checkRange" data-dtype="String">
+            {{selectOptions CheckRangeOptions selected=configSettings.optionalRules.checkRange}}
           </select>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.WallsBlockRange.Hint"}}</div>
 
+        {{#if preV12}}
         <div class="form-group">
-          <label>{{localize "midi-qol-rotv.CoverCalculation.Name"}}</label>
-          <select name="optionalRules.coverCalculation" data-dtype="String">
-            {{#select configSettings.optionalRules.coverCalculation}}
-            {{#each CoverCalculationOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
+          <label>{{localize "midi-qol-rotv.GridlessFudge.Name"}}</label>
+          <input type="number" step="0.1" style="width:40px;" name="gridlessFudge"
+            value="{{configSettings.gridlessFudge}}" />
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.CoverCalculation.Hint"}}</div>
+        {{/if}}
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.GridlessFudge.Hint"}}</div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.GriddedGridless.Name"}}</label>
+          <input type="checkbox" name="griddedGridless" data-dtype="Boolean" {{checked
+            configSettings.griddedGridless}} />
+        </div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.GriddedGridless.Hint"}}</div>
+      </div>
+      <div class="form-group">
+        <label>{{localize "midi-qol-rotv.WallsBlockRange.Name"}}</label>
+        <select name="optionalRules.wallsBlockRange" data-dtype="String">
+          {{selectOptions wallsBlockRangeOptions selected=configSettings.optionalRules.wallsBlockRange}}
+        </select>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WallsBlockRange.Hint1"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WallsBlockRange.Hint2"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WallsBlockRange.Hint3"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WallsBlockRange.Hint4"}}</div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WallsBlockRange.Hint5"}}</div>
+      </div>
 
-        <div class="form-group">
-          <label>{{localize "midi-qol-rotv.DistanceIncludesHeight.Name"}}</label>
-          <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
-            configSettings.optionalRules.distanceIncludesHeight}} />
-        </div>
+      <div class="form-group">
+        <label>{{localize "midi-qol-rotv.CoverCalculation.Name"}}</label>
+        <select name="optionalRules.coverCalculation" data-dtype="String">
+          {{selectOptions CoverCalculationOptions selected=configSettings.optionalRules.coverCalculation}}
+        </select>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.CoverCalculation.Hint"}}</div>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "midi-qol-rotv.DistanceIncludesHeight.Name"}}</label>
+        <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
+          configSettings.optionalRules.distanceIncludesHeight}} />
       </div>
 
       <div class="midi-qol-rotv-box">
@@ -709,14 +665,47 @@
           <label>{{localize "midi-qol-rotv.SkillAbilityCheckAdvantage.Name"}}</label>
           <input type="checkbox" name="skillAbilityCheckAdvantage" data-dtype="Boolean" {{checked
             configSettings.skillAbilityCheckAdvantage}} />
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.SkillAbilityCheckAdvantage.Hint"}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.SkillAbilityCheckAdvantage.Hint"}}</div>
 
-    </div>
+      </div>
+
+      <div class="midi-qol-rotv-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.DisplayBonusRolls.Name"}}</label>
+          <input type="checkbox" name="optionalRules.displayBonusRolls" data-dtype="Boolean" {{checked
+            configSettings.optionalRules.displayBonusRolls}} />
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.DisplayBonusRolls.Hint"}}</div>
+        </div>
+      </div>
+
+      <div class="midi-qol-rotv-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.AutoRerollInitiative.Name"}}</label>
+          <input type="checkbox" name="optionalRules.autoRerollInitiative" data-dtype="Boolean" {{checked
+            configSettings.optionalRules.autoRerollInitiative}} />
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.AutoRerollInitiative.Hint"}}</div>
+        </div>
+      </div>
+
+      <div class="midi-qol-rotv-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.UndoWorkflow.Name"}}</label>
+          <input type="checkbox" name="undoWorkflow" data-dtype="Boolean" {{checked configSettings.undoWorkflow}} />
+        </div>
+        <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.UndoWorkflow.Hint"}}</div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.UndoChatColor.Name"}}</label>
+          <select name="undoChatColor" data-dtype="String">
+            {{selectOptions ColorOptions selected=configSettings.undoChatColor}}
+          </select>
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.UndoChatColor.Hint"}}</div>
+        </div>
+      </div>
     </div>
 
     <!-- Optional Rules Tab-->
-    <div class="tab" data-tab="optional-rules" data-group="sections">
+    <div class="tab midi-scrollable-list" data-tab="optional-rules" data-group="sections">
       <div class="midi-qol-rotv-box">
         <div class="form-group optionalRulesEnabled">
           <label>{{localize "midi-qol-rotv.OptionalRules.Name"}}</label>
@@ -726,7 +715,7 @@
         <div>
 
           {{#unless configSettings.optionalRulesEnabled}}
-          {{localize "midi-qol-rotv.OptionalRules.Hint"}}
+          {{{localize "midi-qol-rotv.OptionalRules.Hint"}}}
           {{/unless}}
           {{#if configSettings.optionalRulesEnabled}}
 
@@ -734,20 +723,37 @@
           <div class="form-group">
             <label>{{localize "midi-qol-rotv.CheckFlanking.Name"}}</label>
             <select name="optionalRules.checkFlanking" data-dtype="String">
-              {{#select configSettings.optionalRules.checkFlanking}}
-              {{#each checkFlankingOptions as |label val|}}
-              <option value="{{val}}">{{label}}</option>
-              {{/each}}
-              {{/select}}
+              {{selectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking}}
             </select>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.CheckFlanking.Hint"}}}</div>
           </div>
 
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.CheckFlanking.Hint"}}</div>
-          <div class="form-group">
-            <label>{{localize "midi-qol-rotv.InvisAdvantage.Name"}}</label>
-            <input type="checkbox" name="optionalRules.invisAdvantage" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.invisAdvantage}} />
+          <div class="midi-qol-rotv-box">
+            <div class="form-group">
+              <label>{{localize "midi-qol-rotv.InvisAdvantage.Name"}}</label>
+              <select name="optionalRules.invisAdvantage" data-dtype="String">
+                {{selectOptions InvisAdvantageOptions selected=configSettings.optionalRules.invisAdvantage}}
+              </select>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.InvisAdvantage.Hint"}}}</div>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.CantSeeAdvantage.Hint"}}}</div>
+            </div>
+
+            <div class="form-group">
+              <label>{{localize "midi-qol-rotv.HiddenAdvantage.Name"}}</label>
+              <select name="optionalRules.hiddenAdvantage" data-dtype="String">
+                {{selectOptions HiddenAdvantageOptions selected=configSettings.optionalRules.hiddenAdvantage}}
+              </select>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.HiddenAdvantage.Hint"}}}</div>
+            </div>
+
+            <div class="form-group">
+              <label>{{localize "midi-qol-rotv.InvisVision.Name"}}</label>
+              <input type="checkbox" name="optionalRules.invisVision" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.invisVision}} />
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.InvisVision.Hint"}}}</div>
+            </div>
           </div>
+
           <div class="form-group">
             <label>{{localize "midi-qol-rotv.RemoveHiddenInvis.Name"}}</label>
             <input type="checkbox" name="optionalRules.removeHiddenInvis" data-dtype="Boolean" {{checked
@@ -763,12 +769,20 @@
             </span>
           </div>
 
-          <div class="form-group">
-            <label style>{{localize "midi-qol-rotv.MaxDRValue.Name"}}</label>
-            <input type="checkbox" name="optionalRules.maxDRValue" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.maxDRValue}} />
-          </div>
+          <div class="midi-qol-rotv-box">
+            <div class="form-group">
+              <label style>{{localize "midi-qol-rotv.MaxDRValue.Name"}}</label>
+              <input type="checkbox" name="optionalRules.maxDRValue" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.maxDRValue}} />
+            </div>
+            <div class="form-group">
+              <label style>{{localize "midi-qol-rotv.DRAllPerDamageDetail.Name"}}</label>
+              <input type="checkbox" name="optionalRules.DRAllPerDamageDetail" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.DRAllPerDamageDetail}} />
+            </div>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.DRAllPerDamageDetail.Hint"}}}</div>
 
+          </div>
           <div class="form-group">
             <label style>{{localize "midi-qol-rotv.CriticalSaves.Name"}}</label>
             <input type="checkbox" name="optionalRules.criticalSaves" data-dtype="Boolean" {{checked
@@ -776,78 +790,86 @@
           </div>
 
           <div class="midi-qol-rotv-box">
-          <div class="form-group">
-            <span>
-              <label>{{localize "midi-qol-rotv.OptionalCritRule.Name"}}</label>
-              <input type="number" style="width:40px;" name="optionalRules.optionalCritRule"
-                value="{{configSettings.optionalRules.optionalCritRule}}" />
-            </span>
-          </div>
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.OptionalCritRule.Hint"}}</div>
+            <div class="form-group">
+              <span>
+                <label>{{localize "midi-qol-rotv.OptionalCritRule.Name"}}</label>
+                <input type="number" style="width:40px;" name="optionalRules.optionalCritRule"
+                  value="{{configSettings.optionalRules.optionalCritRule}}" />
+              </span>
+            </div>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.OptionalCritRule.Hint"}}}</div>
 
-          <div class="form-group">
-            <label style>{{localize "midi-qol-rotv.CriticalNat20.Name"}}</label>
-            <input type="checkbox" name="optionalRules.criticalNat20" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.criticalNat20}} />
+            <div class="form-group">
+              <label style>{{localize "midi-qol-rotv.CriticalNat20.Name"}}</label>
+              <input type="checkbox" name="optionalRules.criticalNat20" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.criticalNat20}} />
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.CriticalNat20.Hint"}}}</div>
+            </div>
           </div>
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.CriticalNat20.Hint"}}</div>
-        </div>
-          <div class="form-fields">
+          <div class="form-group">
             <span>
               <label>{{localize "midi-qol-rotv.NearbyAllyRanged.Name"}}</label>
               <input type="number" step="0.1" style="width:40px;" name="optionalRules.nearbyAllyRanged"
                 value="{{configSettings.optionalRules.nearbyAllyRanged}}" />
             </span>
-          </div>
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.NearbyAllyRanged.Hint"}}</div>
-
-          <div class="midi-qol-rotv-box">
-            <div class="form-fields">
-              <span>
-                <label>{{localize "midi-qol-rotv.ActiveDefence.Name"}}</label>
-                <input type="checkbox" style="width:40px;" name="optionalRules.activeDefence" data-dtype="Boolean"
-                  {{checked configSettings.optionalRules.activeDefence}}
-                  value="{{configSettings.optionalRules.activeDefence}}" data-dtype="Boolean" />
-              </span>
-            </div>
-            <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ActiveDefence.Hint"}}</div>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.NearbyAllyRanged.Hint"}}}</div>
           </div>
 
           <div class="midi-qol-rotv-box">
-            <div class="form-fields">
-              <span>
-                <label>{{localize "midi-qol-rotv.ChallengeModeArmor.Name"}}</label>
-                <input type="checkbox" style="width:40px;" name="optionalRules.challengeModeArmor" data-dtype="Boolean"
-                  {{checked configSettings.optionalRules.challengeModeArmor}}
-                  value="{{configSettings.optionalRules.challengeModeArmor}}" data-dtype="Boolean" />
-              </span>
+            <div class="form-group">
+              <label>{{localize "midi-qol-rotv.ActiveDefence.Name"}}</label>
+              <input type="checkbox" name="optionalRules.activeDefence" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.activeDefence}} />
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ActiveDefence.Hint"}}}</div>
             </div>
-            <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ChallengeModeArmor.Hint"}}</div>
-            <div class="form-fields">
-              <span>
-                <label>{{localize "midi-qol-rotv.ChallengeModeArmorScale.Name"}}</label>
-                <input type="checkbox" style="width:40px;" name="optionalRules.challengeModeArmorScale"
-                  data-dtype="Boolean" {{checked configSettings.optionalRules.challengeModeArmorScale}}
-                  value="{{configSettings.optionalRules.challengeModeArmorScale}}" data-dtype="Boolean" />
-              </span>
+
+            <div class="form-group">
+              <label>{{localize "midi-qol-rotv.ActiveDefenceShow.Name"}}</label>
+              <select name="optionalRules.activeDefenceShow" data-dtype="String">
+                {{selectOptions rollModes selected=configSettings.optionalRules.activeDefenceShow localize=true}}
+              </select>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ActiveDefenceShow.Hint"}}}</div>
             </div>
-            <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ChallengeModeArmorScale.Hint"}}</div>
           </div>
+
+          <div class="midi-qol-rotv-box">
+            <div class="form-group">
+              <label>{{localize "midi-qol-rotv.ChallengeModeArmor.Name"}}</label>
+              <select class="midi-qol-rotv-blind-select" name="optionalRules.challengeModeArmor">
+                {{selectOptions ChallengeModeArmorOptions selected=configSettings.optionalRules.challengeModeArmor}}
+              </select>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ChallengeModeArmor.Hint"}}}</div>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ChallengeModeArmorScale.Hint"}}}</div>
+              <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ChallengeModeArmorScaleNoAR.Hint"}}}</div>
+            </div>
+
+          </div>
+
           {{/if}}
         </div>
+
+        <div class="midi-qol-rotv-box">
+          <div class="form-group">
+            <label>{{localize "midi-qol-rotv.OptionalRuleVitality.Name"}}</label>
+            <input type="text" name="optionalRules.vitalityResource"
+              value="{{configSettings.optionalRules.vitalityResource}}" />
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.OptionalRuleVitality.Hint"}}}</div>
+          </div>
+        </div>
       </div>
+
       <div class="midi-qol-rotv-box">
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ddbGL.Name"}}</label>
           <input type="checkbox" name="optionalRules.enableddbGL" data-dtype="Boolean" {{checked
             configSettings.optionalRules.enableddbGL}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ddbGL.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ddbGL.Hint"}}</div>
       </div>
     </div>
-    <!-- Misc Tab -->
-    <div class="tab" data-tab="misc" data-group="sections">
 
+    <!-- Misc Tab -->
+    <div class="tab midi-scrollable-list" data-tab="misc" data-group="sections">
       <div class="midi-qol-rotv-box">
         <button type="button" name="export-config" id="midi-qol-rotv-export-config">
           <i class="fas fa-dice-d20"></i> {{localize "midi-qol-rotv.ExportConfig"}}
@@ -858,17 +880,31 @@
       </div>
 
       <div class="midi-qol-rotv-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.MidiFieldsTab.Name"}}</label>
+          <input type="checkbox" name="midiFieldsTab" data-dtype="Boolean" {{checked configSettings.midiFieldsTab}} />
+        </div>
+
+        <div class="form-group midiPropoertiesTab">
+          <label>{{localize "midi-qol-rotv.MidiPropertiesTab.Name"}}</label>
+          <select name="midiPropertiesTabRole" data-dtype="String">
+            {{selectOptions midiPropertiesTabOptions selected=configSettings.midiPropertiesTabRole}}
+          </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.MidiPropertiesTab.Hint"}}}</div>
+        </div>
+
         <div class="form-group allowActorUseMacro">
           <label>{{localize "midi-qol-rotv.AllowActorUseMacro.Name"}}</label>
           <input id="allowActorUseMacro" type="checkbox" name="allowActorUseMacro" data-dtype="Boolean" {{checked
             configSettings.allowActorUseMacro}} />
         </div>
+
         <div class="form-group allowUseMacro">
           <label>{{localize "midi-qol-rotv.AllowUseMacro.Name"}}</label>
           <input id="allowUseMacro" type="checkbox" name="allowUseMacro" data-dtype="Boolean" {{checked
             configSettings.allowUseMacro}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AllowUseMacro.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.AllowUseMacro.Hint"}}</div>
       </div>
 
       <div class="midi-qol-rotv-box">
@@ -876,11 +912,7 @@
           <div style="flex-grow:3">
             <label>{{localize "midi-qol-rotv.ShowItemDetails.Name"}}</label>
             <select name="showItemDetails" data-dtype="String">
-              {{#select configSettings.showItemDetails}}
-              {{#each showItemDetailsOptions as |label val|}}
-              <option value="{{val}}">{{label}}</option>
-              {{/each}}
-              {{/select}}
+              {{selectOptions showItemDetailsOptions selected=configSettings.showItemDetails}}
             </select>
             <label>{{localize "midi-qol-rotv.DisplayItems"}}</label>
             <a class="itemTypeListEdit" style="flex-shrink:3" data-action="edit"
@@ -888,98 +920,135 @@
               <i class=" fas fa-edit"></i>
             </a>
           </div>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ShowItemDetails.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ShowItemDetails.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.MergeCard.Name"}}</label>
           <input type="checkbox" name="mergeCard" data-dtype="Boolean" {{checked configSettings.mergeCard}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.MergeCard.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.MergeCard.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.MergeCardCondensed.Name"}}</label>
           <input type="checkbox" name="mergeCardCondensed" data-dtype="Boolean" {{checked
             configSettings.mergeCardCondensed}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.MergeCardCondensed.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.MergeCardCondensed.Hint"}}</div>
+        <!--
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.MergeCardMultiDamage.Name"}}multi damage</label>
+          <input type="checkbox" name="mergeCardMultiDamage" data-dtype="Boolean" {{checked
+            configSettings.mergeCardMultiDamage}} />
+        </div>
+      -->
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.MergeCardMulti.Name"}}</label>
+          <input type="checkbox" name="mergeCardMulti" data-dtype="Boolean" {{checked configSettings.mergeCardMulti}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.MergeCardMulti.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.CollapsibleTargets.Name"}}</label>
+          <input type="checkbox" name="collapsibleTargets" data-dtype="Boolean" {{checked
+            configSettings.collapsibleTargets}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.CollapsibleTargets.Hint"}}}</div>
+        </div>
+
+        <div class="midi-qol-rotv-box">
+          <div class="form-group">
+            <label>{{localize "midi-qol-rotv.ConfirmAttackDamage.Name"}}</label>
+            <select name="confirmAttackDamage" data-dtype="String">
+              {{selectOptions ConfirmAttackDamageOptions selected=configSettings.confirmAttackDamage}}
+            </select>
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ConfirmAttackDamage.Hint"}}}</div>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol-rotv.AutoCompleteWorkflow.Name"}}</label>
+            <input type="checkbox" name="autoCompleteWorkflow" data-dtype="Boolean" {{checked
+              configSettings.autoCompleteWorkflow}} />
+            <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.AutoCompleteWorkflow.Hint"}}}</div>
+          </div>
+        </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.HighlightSuccess.Name"}}</label>
           <input type="checkbox" name="highlightSuccess" data-dtype="Boolean" {{checked
             configSettings.highlightSuccess}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.HighlightSuccess.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.HighlightSuccess.Hint"}}</div>
 
-        <label>{{localize "midi-qol-rotv.RollAlternate.Name"}}</label>
-        <select name="rollAlternate" data-dtype="String">
-          {{#select configSettings.rollAlternate}}
-          {{#each rollAlternateOptions as |label val|}}
-          <option value="{{val}}">{{label}}</option>
-          {{/each}}
-          {{/select}}
-        </select>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.RollAlternate.Hint"}}</div>
+        <div class="form-group">
+          <label>{{localize "midi-qol-rotv.RollAlternate.Name"}}</label>
+          <select name="rollAlternate" data-dtype="String">
+            {{selectOptions rollAlternateOptions selected=configSettings.rollAlternate}}
+          </select>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.RollAlternate.Hint"}}}</div>
+        </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.ShowFastForward.Name"}}</label>
           <input type="checkbox" name="showFastForward" data-dtype="Boolean" {{checked
             configSettings.showFastForward}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.ShowFastForward.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.ShowFastForward.Hint"}}</div>
 
       </div>
       <div class="midi-qol-rotv-box">
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.UseTokenNames.Name"}}</label>
           <input type="checkbox" name="useTokenNames" data-dtype="Boolean" {{checked configSettings.useTokenNames}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.UseTokenNames.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.UseTokenNames.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.UsePlayerPortrait.Name"}}</label>
           <input type="checkbox" name="usePlayerPortrait" data-dtype="Boolean" {{checked
             configSettings.usePlayerPortrait}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.UsePlayerPortrait.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.UsePlayerPortrait.Hint"}}</div>
 
       </div>
       <div class="midi-qol-rotv-box">
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.KeepRollStats.Name"}}</label>
           <input type="checkbox" name="keepRollStats" data-dtype="Boolean" {{checked configSettings.keepRollStats}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.KeepRollStats.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.KeepRollStats.Hint"}}</div>
+
         <div class="form-group">
           <span>
             <label>{{localize "midi-qol-rotv.SaveStatsEvery.Name"}}</label>
             <input type="number" style="width:40px;" name="saveStatsEvery" value="{{configSettings.saveStatsEvery}}" />
           </span>
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.SaveStatsEvery.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.SaveStatsEvery.Hint"}}</div>
+
         <div class="form-group">
           <label>{{localize "midi-qol-rotv.PlayerStatsOnly.Name"}}</label>
           <input type="checkbox" name="playerStatsOnly" data-dtype="Boolean" {{checked
             configSettings.playerStatsOnly}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.PlayerStatsOnly.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.PlayerStatsOnly.Hint"}}</div>
         <button type="button" name="show-stats" id="midi-qol-rotv-show-stats">
           <i class="fas fa-dice-d20"></i> {{localize "midi-qol-rotv.ShowStats"}}
         </button>
       </div>
+
       <div class=" midi-qol-rotv-box">
         <div>
           <!-- Speed Rolls -->
           <div>{{localize "midi-qol-rotv.WorldKeyMappings.Name"}}</div>
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.WorldKeyMappings.Blurb1"}}</div>
-          <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.WorldKeyMappings.Blurb2"}}</div>
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WorldKeyMappings.Blurb1"}}</div>
+          <div class="notes midi-qol-rotv-faint">{{localize "midi-qol-rotv.WorldKeyMappings.Blurb2"}}</div>
         </div>
 
         <div class="form-group stickyKeys">
           <label>{{localize "midi-qol-rotv.FixStickyKeys.Name"}}</label>
           <input type="checkbox" name="fixStickyKeys" data-dtype="Boolean" {{checked configSettings.fixStickyKeys}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.FixStickyKeys.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.FixStickyKeys.Hint"}}</div>
       </div>
 
       <div class=" midi-qol-rotv-box">
@@ -987,8 +1056,8 @@
           <label>{{localize "midi-qol-rotv.UseCustomSounds.Name"}}</label>
           <input id="useCustomSounds" type="checkbox" name="useCustomSounds" data-dtype="Boolean" {{checked
             configSettings.useCustomSounds}} />
+          <div class="notes midi-qol-rotv-faint">{{{localize "midi-qol-rotv.UseCustomSounds.Hint"}}}</div>
         </div>
-        <div class="midi-qol-rotv-faint">{{localize "midi-qol-rotv.UseCustomSounds.Hint"}}</div>
       </div>
     </div>
 
@@ -1008,8 +1077,10 @@
       </div>
     </div>
   </section>
-  <footer class="sheet-footer flexrow">
-    <button type="submit" name="submit">
+  <footer class="sheet-footer flexrow 6" style="align-items: center">
+    <label style="flex-grow: 1">{{localize "midi-qol-rotv.SettingsSearch"}}</label>
+    <input type="search" value="" style="flex-grow: 1" />
+    <button type="submit" name="submit" style="flex-grow: 4">
       <i class="fas fa-save"></i> {{localize "midi-qol-rotv.Save"}}
     </button>
   </footer>

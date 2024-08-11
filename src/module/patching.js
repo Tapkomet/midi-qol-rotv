@@ -1,11 +1,11 @@
-import { log, i18n, error, i18nFormat } from "../midi-qol-rotv.js";
+import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID } from "../midi-qol-rotv.js";
 import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, wrappedDisplayCard } from "./itemhandling.js";
-import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, MQfromUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
+import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getAutoTarget, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, mergeKeyboardOptions, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, setRollMinDiceTerm, setRollMaxDiceTerm, evalAllConditionsAsync, MQfromUuidSync } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { socketlibSocket } from "./GMAction.js";
+import { TroubleShooter } from "./apps/TroubleShooter.js";
 let libWrapper;
 var d20Roll;
 function _isVisionSource(wrapped) {
@@ -45,19 +45,23 @@ export const defaultRollOptions = {
 export function collectBonusFlags(actor, category, detail) {
 	if (!installedModules.get("betterrolls5e")) {
 		let useDetail = false;
-		const bonusFlags = Object.keys(actor.flags["midi-qol-rotv"]?.optional ?? [])
+		const bonusFlags = Object.keys(actor.flags[MODULE_ID]?.optional ?? [])
 			.filter(flag => {
-			const checkFlag = actor.flags["midi-qol-rotv"].optional[flag][category];
+			const checkFlag = actor.flags[MODULE_ID].optional[flag][category];
 			if (checkFlag === undefined)
 				return false;
-			if (!(typeof checkFlag === "string" || checkFlag[detail] || (detail !== "fail" && checkFlag["all"]) !== undefined))
+			if (detail.startsWith("fail")) {
+				const [_, type] = detail.split(".");
+				return checkFlag.fail && checkFlag.fail[type] ? getOptionalCountRemainingShortFlag(actor, flag) > 0 : false;
+			}
+			else if (!(typeof checkFlag === "string" || checkFlag[detail] || checkFlag["all"] !== undefined))
 				return false;
-			if (actor.flags["midi-qol-rotv"].optional[flag].count === undefined)
+			if (actor.flags[MODULE_ID].optional[flag].count === undefined)
 				return true;
 			return getOptionalCountRemainingShortFlag(actor, flag) > 0;
 		})
 			.map(flag => {
-			const checkFlag = actor.flags["midi-qol-rotv"].optional[flag][category];
+			const checkFlag = actor.flags[MODULE_ID].optional[flag][category];
 			if (typeof checkFlag === "string")
 				return `flags.midi-qol-rotv.optional.${flag}`;
 			else
@@ -67,124 +71,150 @@ export function collectBonusFlags(actor, category, detail) {
 	}
 	return [];
 }
-export async function bonusCheck(actor, result, category, detail) {
-	if (!installedModules.get("betterrolls5e")) {
-		let bonusFlags = collectBonusFlags(actor, category, detail);
-		/* causes strange behaviour when enabled
-		if (category === "skill") {
-		const abl = actor.system.skills[detail].ability;
-		bonusFlags = bonusFlags.concat(collectBonusFlags(actor, "check", "abl"));
+export async function bonusCheck(actor, result, category, detail, messageData = {}) {
+	let bonusFlags = collectBonusFlags(actor, category, detail);
+	if (bonusFlags.length > 0) {
+		const data = {
+			actor,
+			roll: result,
+			rollHTML: await midiRenderRoll(result),
+			rollTotal: result.total,
+			category,
+			detail: detail,
+			messageData
+		};
+		let title;
+		let systemString = game.system.id.toUpperCase();
+		if (GameSystemConfig.abilities[detail]?.label || GameSystemConfig.skills[detail]?.label) {
+			if (detail.startsWith("fail"))
+				title = "Failed Save Check";
+			else if (category.startsWith("check"))
+				title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: GameSystemConfig.abilities[detail].label ?? "" });
+			else if (category.startsWith("save"))
+				title = i18nFormat(`${systemString}.SavePromptTitle`, { ability: GameSystemConfig.abilities[detail].label ?? "" });
+			else if (category.startsWith("skill"))
+				title = i18nFormat(`${systemString}.SkillPromptTitle`, { skill: GameSystemConfig.skills[detail].label ?? "" });
 		}
-		*/
-		if (bonusFlags.length > 0) {
-			const data = {
-				actor,
-				roll: result,
-				rollHTML: await midiRenderRoll(result),
-				rollTotal: result.total,
-				category,
-				detail: detail
-			};
-			let title;
-			let config = getSystemCONFIG();
-			let systemString = game.system.id.toUpperCase();
-			switch (category) {
-				case "check":
-					title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: config.abilities[detail] ?? "" });
-					break;
-				case "save":
-					title = i18nFormat(`${systemString}.SavePromptTitle`, { ability: config.abilities[detail] ?? "" });
-					break;
-				case "skill":
-					title = i18nFormat(`${systemString}.SkillPromptTitle`, { skill: config.skills[detail] ?? "" });
-					break;
-			}
-			await bonusDialog.bind(data)(bonusFlags, detail ? `${category}.${detail}` : category, true, `${actor.name} - ${title}`, "roll", "rollTotal", "rollHTML");
-			result = data.roll;
+		else {
+			if (detail.startsWith("fail"))
+				title = "Failed Save Check";
+			else if (category.startsWith("check"))
+				title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: GameSystemConfig.abilities[detail] ?? "" });
+			else if (category.startsWith("save"))
+				title = i18nFormat(`${systemString}.SavePromptTitle`, { ability: GameSystemConfig.abilities[detail] ?? "" });
+			else if (category.startsWith("skill"))
+				title = i18nFormat(`${systemString}.SkillPromptTitle`, { skill: GameSystemConfig.skills[detail] ?? "" });
 		}
+		const newRoll = await bonusDialog.bind(data)(bonusFlags, detail ? `${category}.${detail}` : category, checkMechanic("displayBonusRolls"), `${actor.name} - ${title}`, data.roll, "roll", { messageData });
+		result = newRoll;
 	}
 	return result;
 }
 async function doRollSkill(wrapped, ...args) {
-	let [skillId, options = { event: {}, parts: [], advantage: false, disadvantage: false, simulate: false, targetValue: undefined }] = args;
-	const chatMessage = options.chatMessage;
-	const rollTarget = options.targetValue;
-	// options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
-	mergeKeyboardOptions(options, mapSpeedKeys(undefined, "ability"));
-	options.event = {};
-	let procOptions = options;
-	if (configSettings.skillAbilityCheckAdvantage) {
-		procOptions = procAbilityAdvantage(this, "check", this.system.skills[skillId].ability, options);
-		// options = procAbilityAdvantage(actor, "check", actor.system.skills[skillId].ability, options)
-	}
-	// let procOptions: Options = procAbilityAdvantage(this, "check", this.system.skills[skillId].ability, options)
-	procOptions = procAdvantageSkill(this, skillId, procOptions);
-	if (procOptions.advantage && procOptions.disadvantage) {
-		procOptions.advantage = false;
-		procOptions.disadvantage = false;
-	}
-	if (procAutoFailSkill(this, skillId)
-		|| (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
-		options.parts = ["-100"];
-	}
-	let result;
-	if (installedModules.get("betterrolls5e")) {
-		let event = {};
-		if (procOptions.advantage) {
-			options.advantage = true;
-			event = { shiftKey: true };
+	try {
+		let [skillId, options = { event: {}, parts: [], advantage: false, disadvantage: false, simulate: false, targetValue: undefined }] = args;
+		const chatMessage = options.chatMessage;
+		const rollTarget = options.targetValue;
+		let overtimeActorUuid;
+		if (options.event) {
+			const target = options.event?.target?.closest('.roll-link, [data-action="rollRequest"], [data-action="concentration"]');
+			if (target?.dataset?.midiOvertimeActorUuid)
+				overtimeActorUuid = target.dataset.midiOvertimeActorUuid;
+			if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
+				const actualActor = MQfromUuidSync(overtimeActorUuid);
+				if (actualActor)
+					return actualActor.rollSkill(...args);
+			}
 		}
-		;
-		if (procOptions.disadvantage) {
-			options.disadvantage = true;
-			event = { ctrlKey: true };
+		const keyOptions = mapSpeedKeys(undefined, "ability");
+		options.advantage || (options.advantage = options.event?.advantage);
+		options.disadvantage || (options.disadvantage = options.event?.disadvantage);
+		if (options.mapKeys !== false) {
+			if (keyOptions?.advantage === true)
+				options.advantage = true;
+			if (keyOptions?.disadvantage === true)
+				options.disadvantage = true;
+			if (keyOptions?.fastForwardAbility === true)
+				options.fastForward = true;
+			if (keyOptions?.advantage || keyOptions?.disadvantage)
+				options.fastForward = true;
 		}
-		;
-		options.event = event;
-		result = wrapped(skillId, options);
-		if (chatMessage !== false)
-			return result;
-		result = await result;
-	}
-	else {
+		// mergeKeyboardOptions(options, mapSpeedKeys(undefined, "ability"));
+		options.event = {};
+		let procOptions = options;
+		if (configSettings.skillAbilityCheckAdvantage) {
+			procOptions = await procAbilityAdvantage(this, "check", this.system.skills[skillId].ability, options);
+		}
+		procOptions = await procAdvantageSkill(this, skillId, procOptions);
+		if (procOptions.advantage && procOptions.disadvantage) {
+			procOptions.advantage = false;
+			procOptions.disadvantage = false;
+		}
+		if (procAutoFailSkill(this, skillId)
+			|| (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
+			options.parts = ["-100"];
+		}
+		let result;
 		procOptions.chatMessage = false;
 		if (!procOptions.parts || procOptions.parts.length === 0)
 			delete procOptions.parts;
+		delete procOptions.event;
 		// result = await wrapped.call(this, skillId, procOptions);
+		let messageData;
+		Hooks.once(`${game.system.id}.preRollSkill`, (actor, rollData, skillId) => {
+			messageData = rollData.messageData;
+			if (overtimeActorUuid)
+				messageData["flags.midi-qol-rotv.overtimeActorUuid"] = overtimeActorUuid;
+		});
 		result = await wrapped(skillId, procOptions);
-	}
-	if (!result)
+		if (!result)
+			return result;
+		let rollMode = result.options?.rollMode ?? game.settings.get("core", "rollMode");
+		const saveRollMode = game.settings.get("core", "rollMode");
+		const blindSkillRoll = configSettings.rollSkillsBlind.includes("all") || configSettings.rollSkillsBlind.includes(skillId);
+		if (blindSkillRoll && ["publicroll", "roll", "gmroll"].includes(rollMode)) {
+			rollMode = "blindroll";
+			game.settings.set("core", "rollMode", "blindroll");
+		}
+		const flavor = result.options?.flavor;
+		const maxflags = foundry.utils.getProperty(this, "flags.midi-qol-rotv.max") ?? {};
+		const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.skill[skillId])) ?? false;
+		if (maxValue && Number.isNumeric(maxValue)) {
+			result = setRollMaxDiceTerm(result, Number(maxValue));
+		}
+		const minflags = foundry.utils.getProperty(this, "flags.midi-qol-rotv.min") ?? {};
+		const minValue = (minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false;
+		if (minValue && Number.isNumeric(minValue)) {
+			result = setRollMinDiceTerm(result, Number(minValue));
+		}
+		if (rollMode !== "blindroll")
+			rollMode = result.options.rollMode;
+		else
+			result.options.rollMode = "blindroll";
+		await displayDSNForRoll(result, "skill", rollMode);
+		if (!options.simulate) {
+			result = await bonusCheck(this, result, "skill", skillId, messageData);
+			DSNMarkDiceDisplayed(result);
+		}
+		let success = undefined;
+		if (rollTarget !== undefined) {
+			success = result.total >= rollTarget;
+			result.options.success = success;
+		}
+		if (chatMessage !== false && result) {
+			await displayDSNForRoll(result, "skill", rollMode);
+			if (foundry.utils.getProperty(result, "flags.midi-qol-rotv.chatMessageShown") !== true)
+				await result.toMessage(messageData, { rollMode });
+		}
+		game.settings.set("core", "rollMode", saveRollMode);
+		await expireRollEffect.bind(this)("Skill", skillId, success);
 		return result;
-	const flavor = result.options?.flavor;
-	const maxflags = getProperty(this.flags, "midi-qol-rotv.max") ?? {};
-	const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
-	if (maxValue && Number.isNumeric(maxValue)) {
-		result.terms[0].modifiers.unshift(`max${maxValue}`);
-		//@ts-ignore
-		result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
 	}
-	const minflags = getProperty(this.flags, "midi-qol-rotv.min") ?? {};
-	const minValue = (minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false;
-	if (minValue && Number.isNumeric(minValue)) {
-		result.terms[0].modifiers.unshift(`min${minValue}`);
-		//@ts-ignore
-		result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+	catch (err) {
+		const message = `doRollSkill error ${this.name}, ${this.uuid}`;
+		TroubleShooter.recordError(err, message);
+		throw err;
 	}
-	if (!options.simulate) {
-		result = await bonusCheck(this, result, "skill", skillId);
-	}
-	if (chatMessage !== false && result) {
-		const args = { "speaker": getSpeaker(this), flavor };
-		setProperty(args, `flags.${game.system.id}.roll`, { type: "skill", skillId });
-		if (game.system.id === "sw5e")
-			setProperty(args, "flags.sw5e.roll", { type: "skill", skillId });
-		await result.toMessage(args);
-	}
-	let success = undefined;
-	if (rollTarget !== undefined)
-		success = result.total >= rollTarget;
-	await expireRollEffect.bind(this)("Skill", skillId, success);
-	return result;
 }
 function multiply(modifier) {
 	const rgx = /mx([0-9])+/;
@@ -201,44 +231,82 @@ function multiply(modifier) {
 }
 export function addDiceTermModifiers() {
 	Die.MODIFIERS["mx"] = "multiply";
-	setProperty(Die.prototype, "multiply", multiply);
+	foundry.utils.setProperty(Die.prototype, "multiply", multiply);
+}
+export function averageDice(roll) {
+	roll.terms = roll.terms.map(term => {
+		if (term instanceof DiceTerm) {
+			const mult = term.modifiers.includes("mx2") ? 2 : 1;
+			const newTerm = new NumericTerm({ number: Math.floor(term.number * mult * (term.faces + 1) / 2) });
+			newTerm.options = term.options;
+			return newTerm;
+		}
+		return term;
+	});
+	//@ts-expect-error _formula is private
+	roll._formula = roll.constructor.getFormula(roll.terms);
+	return roll;
 }
 function configureDamage(wrapped) {
-	if (!this.isCritical || criticalDamage === "default") {
+	let useDefaultCritical = getCriticalDamage() === "default";
+	useDefaultCritical || (useDefaultCritical = getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
+	useDefaultCritical || (useDefaultCritical = getCriticalDamage() === "explodeNPC" && this.data.actorType !== "npc");
+	if (!this.isCritical || useDefaultCritical) {
 		while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
 			this.terms.pop();
-		return wrapped();
+		wrapped();
+		if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all")
+			averageDice(this);
+		return;
 	}
 	// if (this.options.configured) return; seems this is not required.
 	let bonusTerms = [];
 	/* criticalDamage is one of
 	"default": "RotV Settings Only",
 	"maxDamage": "Max Normal Damage",
-	"maxCrit": "Max Critical Dice",
+	"maxCrit": "Max Critical Dice (flat number)",
+	"maxCritRoll": "Max Critical Dice (roll dice)",
 	"maxAll": "Max All Dice",
 	"doubleDice": "Double Rolled Damage",
-	"explode": "Explode critical dice",
-	"baseDamage": "No Bonus"
-	*/
+	"explode": "Explode all critical dice",
+	"explodePlayer": "Explode Player critical dice",
+	"explodeGM": "Explode GM crtical dice",
+	"baseDamage": "Only Weapon Extra Critical",
+	"maxBaseRollCrit": "Max base damage and roll critical dice"
+	},
+*/
 	// if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
 	for (let [i, term] of this.terms.entries()) {
 		let cm = this.options.criticalMultiplier ?? 2;
 		let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
-		switch (criticalDamage) {
+		switch (getCriticalDamage()) {
 			case "maxDamage":
 				if (term instanceof DiceTerm)
 					term.modifiers.push(`min${term.faces}`);
+				break;
+			case "maxDamageExplode":
+				if (term instanceof DiceTerm)
+					term.modifiers.push(`min${term.faces}`);
+				if (term instanceof DiceTerm) {
+					bonusTerms.push(new OperatorTerm({ operator: "+" }));
+					//@ts-ignore
+					const newTerm = new Die({ number: term.number + cb, faces: term.faces });
+					newTerm.modifiers.push(`x${term.faces}`);
+					newTerm.options = term.options;
+					// foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
+					bonusTerms.push(newTerm);
+				}
 				break;
 			case "maxCrit": // Powerful critical
 			case "maxCritRoll":
 				if (term instanceof DiceTerm) {
 					let critTerm;
 					bonusTerms.push(new OperatorTerm({ operator: "+" }));
-					if (criticalDamage === "maxCrit")
+					if (getCriticalDamage() === "maxCrit")
 						critTerm = new NumericTerm({ number: (term.number + cb) * term.faces });
 					else {
 						critTerm = new Die({ number: term.number + cb, faces: term.faces });
-						critTerm.modifiers = duplicate(term.modifiers);
+						critTerm.modifiers = foundry.utils.duplicate(term.modifiers);
 						critTerm.modifiers.push(`min${term.faces}`);
 					}
 					critTerm.options = term.options;
@@ -267,13 +335,27 @@ function configureDamage(wrapped) {
 				}
 				break;
 			case "explode":
+			case "explodeCharacter":
+			case "explodeNPC":
 				if (term instanceof DiceTerm) {
 					bonusTerms.push(new OperatorTerm({ operator: "+" }));
 					//@ts-ignore
 					const newTerm = new Die({ number: term.number + cb, faces: term.faces });
 					newTerm.modifiers.push(`x${term.faces}`);
 					newTerm.options = term.options;
-					// setProperty(newTerm.options, "sourceTerm", term);
+					// foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
+					bonusTerms.push(newTerm);
+				}
+				break;
+			case "maxBaseRollCrit":
+				if (term instanceof DiceTerm)
+					term.modifiers.push(`min${term.faces}`);
+				if (term instanceof DiceTerm) {
+					bonusTerms.push(new OperatorTerm({ operator: "+" }));
+					//@ts-ignore
+					const newTerm = new Die({ number: term.number, faces: term.faces });
+					newTerm.options = term.options;
+					// foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
 					bonusTerms.push(newTerm);
 				}
 				break;
@@ -299,69 +381,161 @@ function configureDamage(wrapped) {
 		this.terms.pop();
 	this._formula = this.constructor.getFormula(this.terms);
 	this.options.configured = true;
+	if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all")
+		averageDice(this);
 }
 async function doAbilityRoll(wrapped, rollType, ...args) {
-	let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined }] = args;
-	const rollTarget = options.targetValue;
-	if (procAutoFail(this, rollType, abilityId)) {
-		options.parts = ["-100"];
+	let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined, isMagicalSave: false, isConcentrationCheck: false }] = args;
+	let overtimeActorUuid;
+	if (options.event) {
+		const target = options.event?.target?.closest('.roll-link, [data-action="rollRequest"], [data-action="concentration"]');
+		if (target?.dataset?.midiOvertimeActorUuid) {
+			overtimeActorUuid = target.dataset.midiOvertimeActorUuid;
+			options.rollMode = target.dataset.midiRollMode ?? options.rollMode;
+		}
+		if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
+			const actualActor = MQfromUuidSync(overtimeActorUuid);
+			if (actualActor && rollType === "save")
+				return actualActor.rollAbilitySave(...args);
+			else
+				return actualActor.rollAbilityTest(...args);
+		}
 	}
-	const chatMessage = options.chatMessage;
-	const keyOptions = mapSpeedKeys(undefined, "ability");
-	if (options.mapKeys !== false) {
-		if (keyOptions?.advantage === true)
-			options.advantage = options.advantage || keyOptions.advantage;
-		if (keyOptions?.disadvantage === true)
-			options.disadvantage = options.disadvantage || keyOptions.disadvantage;
-		if (keyOptions?.fastForwardAbility === true)
-			options.fastForward = options.fastForward || keyOptions.fastForwardAbility;
-	}
-	// Hack for MTB bug
-	if (options.event?.advantage)
-		options.advantage = options.event.advantage || options.advantage;
-	if (options.event?.disadvantage)
-		options.disadvantage = options.event.disadvantage || options.disadvantage;
-	options.event = {};
-	let procOptions = procAbilityAdvantage(this, rollType, abilityId, options);
-	if (procOptions.advantage && procOptions.disadvantage) {
-		procOptions.advantage = false;
-		procOptions.disadvantage = false;
-	}
-	let result;
-	if (!options.parts || procOptions.parts.length === 0)
-		delete options.parts;
-	procOptions.chatMessage = false;
-	result = await wrapped(abilityId, procOptions);
-	if (!result)
+	try {
+		const rollTarget = options.targetValue;
+		if (rollTarget !== undefined && !checkRule("criticalSaves")) { // We have a target value, which means we are checking for success and not criticals
+			options.critical = 21;
+			options.fumble = 0;
+		}
+		let success = undefined;
+		if (procAutoFail(this, rollType, abilityId)) {
+			options.parts = ["-100"];
+			success = false;
+		}
+		if (options.fromMarsRotVChatCard) { // It seems mtb ignores the advantage/disadvantage flags sent in the request
+			options.advantage || (options.advantage = options.event?.altKey);
+			options.disadvantage || (options.disadvantage = options.event?.ctrlKey);
+			if (!autoFastForwardAbilityRolls)
+				options.fastForward || (options.fastForward = options.event?.shiftKey);
+		}
+		options.advantage || (options.advantage = options.event?.advantage);
+		options.disadvantage || (options.disadvantage = options.event?.disadvantage);
+		if (options.fromMarsRotVChatCard)
+			options.fastForward || (options.fastForward = autoFastForwardAbilityRolls);
+		const chatMessage = options.chatMessage;
+		const keyOptions = mapSpeedKeys(undefined, "ability");
+		if (options.mapKeys !== false) {
+			if (keyOptions?.advantage === true)
+				options.advantage = true;
+			if (keyOptions?.disadvantage === true)
+				options.disadvantage = true;
+			if (keyOptions?.fastForwardAbility === true)
+				options.fastForward = true;
+			if (keyOptions?.advantage || keyOptions?.disadvantage)
+				options.fastForward = true;
+		}
+		options.event = {};
+		let procOptions = await procAbilityAdvantage(this, rollType, abilityId, options);
+		if (procOptions.advantage && procOptions.disadvantage) {
+			procOptions.advantage = false;
+			procOptions.disadvantage = false;
+		}
+		let result;
+		if (!options.parts || procOptions.parts.length === 0)
+			delete options.parts;
+		procOptions.chatMessage = false;
+		delete procOptions.event;
+		let messageData;
+		const type = rollType === "save" ? "preRollAbilitySave" : "preRollAbilityTest";
+		Hooks.once(`${game.system.id}.${type}`, (actor, rollData, skillId) => {
+			messageData = rollData.messageData;
+			if (overtimeActorUuid)
+				messageData["flags.midi-qol-rotv.overtimeActorUuid"] = overtimeActorUuid;
+		});
+		if (options.isConcentrationCheck && Hooks.call("rotv.preRollConcentration", this, options) === false)
+			return;
+		result = await wrapped(abilityId, procOptions);
+		if (success === false) {
+			result = new Roll("-1[auto fail]");
+			// V12 - since the roll is -1 evaluateSync will work
+			const evaluateSync = result.evaluateSync;
+			if (evaluateSync)
+				result = evaluateSync.bind(result)();
+			else
+				result = await result.evaluate();
+		}
+		if (!result)
+			return result;
+		if (options.isConcentrationCheck)
+			Hooks.callAll("rotv.rollConcentration", this, result);
+		const flavor = result.options?.flavor;
+		let maxFlags = foundry.utils.getProperty(this, "flags.midi-qol-rotv.max.ability") ?? {};
+		let maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false;
+		if (options.isConcentrationCheck)
+			maxValue = maxFlags.save?.concentration ?? maxValue;
+		if (maxValue && Number.isNumeric(maxValue)) {
+			result = setRollMaxDiceTerm(result, Number(maxValue));
+		}
+		const minFlags = foundry.utils.getProperty(this, "flags.midi-qol-rotv.min.ability") ?? {};
+		let minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
+		if (options.isConcentrationCheck)
+			minValue = minFlags.save?.concentration ?? minValue;
+		if (minValue && Number.isNumeric(minValue)) {
+			result = setRollMinDiceTerm(result, Number(minValue));
+		}
+		let rollMode = options.rollMode ?? result.options.rollMode ?? game.settings.get("core", "rollMode");
+		let blindCheckRoll;
+		let blindSaveRoll;
+		const saveRollMode = game.settings.get("core", "rollMode");
+		if (["publicroll", "roll", "gmroll"].includes(rollMode)) {
+			switch (rollType) {
+				case "check":
+					blindCheckRoll = configSettings.rollChecksBlind.includes("all") || configSettings.rollChecksBlind.includes(abilityId);
+					if (blindCheckRoll) {
+						rollMode = "blindroll";
+						game.settings.set("core", "rollMode", "blindroll");
+						result.options.rollMode = "blindroll";
+					}
+					break;
+				case "save":
+					blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes(abilityId);
+					if (blindSaveRoll) {
+						rollMode = "blindroll";
+						game.settings.set("core", "rollMode", "blindroll");
+						result.options.rollMode = "blindroll";
+						break;
+					}
+			}
+		}
+		if (rollMode !== "blindroll")
+			rollMode = result.options.rollMode;
+		await displayDSNForRoll(result, rollType, rollMode);
+		foundry.utils.mergeObject(messageData, { "flags": options.flags ?? {} });
+		foundry.utils.setProperty(messageData, "flags.midi-qol-rotv.lmrtfy.requestId", options.flags?.lmrtfy?.data?.requestId);
+		if (!options.simulate) {
+			result = await bonusCheck(this, result, rollType, abilityId, messageData);
+			DSNMarkDiceDisplayed(result);
+		}
+		if (rollTarget !== undefined && success === undefined) {
+			success = result.total >= rollTarget;
+			result.options.success = success;
+		}
+		if (chatMessage !== false && result) {
+			messageData.template = "modules/midi-qol-rotv/templates/roll-base.html";
+			if (foundry.utils.getProperty(result, "flags.midi-qol-rotv.chatMessageShown") !== true)
+				await result.toMessage(messageData, { rollMode });
+		}
+		game.settings.set("core", "rollMode", saveRollMode);
+		await expireRollEffect.bind(this)(rollType, abilityId, success);
+		if (options.isConcentrationCheck)
+			expireRollEffect.bind(this)("isConcentrationSave", success);
 		return result;
-	const maxFlags = getProperty(this.flags, "midi-qol-rotv.max.ability") ?? {};
-	const flavor = result.options?.flavor;
-	const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false;
-	if (maxValue && Number.isNumeric(maxValue)) {
-		result.terms[0].modifiers.unshift(`max${maxValue}`);
-		//@ts-ignore
-		result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
 	}
-	const minFlags = getProperty(this.flags, "midi-qol-rotv.min.ability") ?? {};
-	const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
-	if (minValue && Number.isNumeric(minValue)) {
-		result.terms[0].modifiers.unshift(`min${minValue}`);
-		//@ts-ignore
-		result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+	catch (err) {
+		const message = `doAbilityRoll error ${this.name} ${abilityId} ${rollType} ${this.uuid}`;
+		TroubleShooter.recordError(err, message);
+		throw err;
 	}
-	if (!options.simulate)
-		result = await bonusCheck(this, result, rollType, abilityId);
-	if (chatMessage !== false && result) {
-		const args = { "speaker": getSpeaker(this), flavor };
-		setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
-		args.template = "modules/midi-qol-rotv/templates/roll.html";
-		await result.toMessage(args);
-	}
-	let success = undefined;
-	if (rollTarget !== undefined)
-		success = result.total >= rollTarget;
-	await expireRollEffect.bind(this)(rollType, abilityId, success);
-	return result;
 }
 export async function rollAbilitySave(wrapped, ...args) {
 	return doAbilityRoll.bind(this)(wrapped, "save", ...args);
@@ -369,105 +543,64 @@ export async function rollAbilitySave(wrapped, ...args) {
 async function rollAbilityTest(wrapped, ...args) {
 	return doAbilityRoll.bind(this)(wrapped, "check", ...args);
 }
-export function preRollAbilitySaveHook(item, rollData, abilityId) {
-	return doPreRollAbilityHook.bind("save", item, rollData, abilityId);
-}
-export function rollAbilitySaveHook(item, roll, abilityId) {
-	return doRollAbilityHook("save", item, roll, abilityId);
-}
-export function preRollAbilityTestHook(item, rollData, abilityId) {
-	return doPreRollAbilityHook.bind(this)("check", item, rollData, abilityId);
-}
-export function rollAbilityTestHook(item, roll, abilityId) {
-	return doRollAbilityHook("check", item, roll, abilityId);
+async function rollDeathSave(wrapped, options) {
+	mergeKeyboardOptions(options ?? {}, mapSpeedKeys(undefined, "ability"));
+	const advFlags = foundry.utils.getProperty(this, "flags.midi-qol-rotv")?.advantage;
+	const disFlags = foundry.utils.getProperty(this, "flags.midi-qol-rotv")?.disadvantage;
+	options.fastForward = autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey;
+	if (advFlags?.all || advFlags?.deathSave || disFlags?.all || disFlags?.deathSave) {
+		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+		if (await evalAllConditionsAsync(this, "flags.midi-qol-rotv.advantage.all", conditionData) ||
+			await evalAllConditionsAsync(this, "flags.midi-qol-rotv.advantage.deathSave", conditionData)) {
+			options.advantage = true;
+		}
+		if (await evalAllConditionsAsync(this, "flags.midi-qol-rotv.disadvantage.all", conditionData) ||
+			await evalAllConditionsAsync(this, "flags.midi-qol-rotv.disadvantage.deathSave", conditionData)) {
+			options.disadvantage = true;
+		}
+	}
+	if (options.advantage && options.disadvantage) {
+		options.advantage = options.disadvantage = false;
+	}
+	const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
+	if (blindSaveRoll)
+		options.rollMode = "blindroll";
+	return wrapped(options);
 }
 export function preRollDeathSaveHook(actor, rollData) {
 	mergeKeyboardOptions(rollData ?? {}, mapSpeedKeys(undefined, "ability"));
-	const advFlags = getProperty(actor.flags, "midi-qol-rotv")?.advantage;
-	const disFlags = getProperty(actor.flags, "midi-qol-rotv")?.disadvantage;
-	let withAdvantage = false;
-	let withDisadvantage = false;
+	const advFlags = foundry.utils.getProperty(actor, "flags.midi-qol-rotv")?.advantage;
+	const disFlags = foundry.utils.getProperty(actor, "flags.midi-qol-rotv")?.disadvantage;
+	let withAdvantage = rollData.advantage ?? false;
+	let withDisadvantage = rollData.disadvantage ?? false;
 	rollData.fastForward = autoFastForwardAbilityRolls ? !rollData.event?.fastKey : rollData.event?.fastKey;
-	if (advFlags || disFlags) {
+	if (advFlags?.all || advFlags?.deathSave || disFlags?.all || disFlags?.deathSave) {
 		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
-		if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
-			|| (advFlags?.deathSave && evalCondition(advFlags.deathSave, conditionData))) {
-			withAdvantage = true;
+		if (evalAllConditions(actor, "flags.midi-qol-rotv.advantage.all", conditionData) ||
+			evalAllConditions(actor, "flags.midi-qol-rotv.advantage.deathSave", conditionData)) {
+			rollData.advantage = true;
 		}
-		if ((disFlags?.all && evalCondition(disFlags.all, conditionData))
-			|| (disFlags?.deathSave && evalCondition(disFlags.deathSave, conditionData))) {
-			withDisadvantage = true;
+		if (evalAllConditions(actor, "flags.midi-qol-rotv.disadvantage.all", conditionData) ||
+			evalAllConditions(actor, "flags.midi-qol-rotv.disadvantage.deathSave", conditionData)) {
+			rollData.disadvantage = true;
 		}
 	}
-	rollData.advantage = withAdvantage && !withDisadvantage;
-	rollData.disadvantage = withDisadvantage && !withAdvantage;
 	if (rollData.advantage && rollData.disadvantage) {
 		rollData.advantage = rollData.disadvantage = false;
 	}
+	const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
+	if (blindSaveRoll)
+		rollData.rollMode = "blindroll";
 	return true;
 }
-async function doPreRollAbilityHook(rollType, item, rollData, abilityId) {
-	const rollTarget = rollData.targetValue;
-	if (procAutoFail(this, rollType, abilityId)) {
-		rollData.parts = ["-100"];
+export function deathSaveHook(actor, result, details) {
+	if (configSettings.addDead !== "none" && details.chatString === "ROTV.DeathSaveFailure") {
+		setDeadStatus(actor, { effect: getDeadStatus(), useDefeated: true, makeDead: true });
+		// setDeadStatus(actor, { effect: getUnconsciousStatus(), useDefeated: false, makeDead: false });
 	}
-	const chatMessage = rollData.chatMessage;
-	const keyOptions = mapSpeedKeys(undefined, "ability");
-	if (rollData.mapKeys !== false) {
-		if (keyOptions?.advantage === true)
-			rollData.advantage = rollData.advantage || keyOptions.advantage;
-		if (keyOptions?.disadvantage === true)
-			rollData.disadvantage = rollData.disadvantage || keyOptions.disadvantage;
-		if (keyOptions?.fastForwardAbility === true)
-			rollData.fastForward = rollData.fastForward || keyOptions.fastForwardAbility;
-	}
-	// Hack for MTB bug
-	if (rollData.event?.advantage)
-		rollData.advantage = rollData.event.advantage || rollData.advantage;
-	if (rollData.event?.disadvantage)
-		rollData.disadvantage = rollData.event.disadvantage || rollData.disadvantage;
-	rollData.event = {};
-	let procOptions = procAbilityAdvantage(this, rollType, abilityId, rollData);
-	if (procOptions.advantage && procOptions.disadvantage) {
-		procOptions.advantage = false;
-		procOptions.disadvantage = false;
-	}
-	let result;
-	if (!rollData.parts || procOptions.parts.length === 0)
-		delete rollData.parts;
-	rollData = mergeObject(rollData, procOptions);
-	if (chatMessage !== false && result) {
-		rollData.template = "modules/midi-qol-rotv/templates/roll.html";
-	}
-	return true;
-}
-function doRollAbilityHook(rollType, item, roll /* D20Roll */, abilityId) {
-	const maxFlags = getProperty(item.flags, "midi-qol-rotv.max.ability") ?? {};
-	let result = roll;
-	const flavor = result.options?.flavor;
-	const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false;
-	if (maxValue && Number.isNumeric(maxValue)) {
-		result.terms[0].modifiers.unshift(`max${maxValue}`);
-		//@ts-ignore
-		result = new Roll(Roll.getFormula(result.terms)).evaluate({ async: false });
-	}
-	const minFlags = getProperty(item.flags, "midi-qol-rotv.min.ability") ?? {};
-	const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
-	if (minValue && Number.isNumeric(minValue)) {
-		result.terms[0].modifiers.unshift(`min${minValue}`);
-		result = new Roll(Roll.getFormula(result.terms)).evaluate({ async: false });
-	}
-	if (!roll.options.simulate)
-		result = /* await  show stopper for this */ bonusCheck(this, result, rollType, abilityId);
-	let success = undefined;
-	const rollTarget = roll.options.targetValue;
-	if (rollTarget !== undefined)
-		success = result.total >= rollTarget;
-	/* await - maybe ok */ expireRollEffect.bind(this)(rollType, abilityId, success);
-	return result;
 }
 export function procAutoFail(actor, rollType, abilityId) {
-	const midiFlags = actor.flags["midi-qol-rotv"] ?? {};
+	const midiFlags = actor.flags[MODULE_ID] ?? {};
 	const fail = midiFlags.fail ?? {};
 	if (fail.ability || fail.all) {
 		const rollFlags = (fail.ability && fail.ability[rollType]) ?? {};
@@ -477,7 +610,7 @@ export function procAutoFail(actor, rollType, abilityId) {
 	return false;
 }
 export function procAutoFailSkill(actor, skillId) {
-	const midiFlags = actor.flags["midi-qol-rotv"] ?? {};
+	const midiFlags = actor.flags[MODULE_ID] ?? {};
 	const fail = midiFlags.fail ?? {};
 	if (fail.skill || fail.all) {
 		const rollFlags = (fail.skill && fail.skill[skillId]) || false;
@@ -486,46 +619,45 @@ export function procAutoFailSkill(actor, skillId) {
 	}
 	return false;
 }
-export function procAbilityAdvantage(actor, rollType, abilityId, options) {
-	const midiFlags = actor.flags["midi-qol-rotv"] ?? {};
+export async function procAbilityAdvantage(actor, rollType, abilityId, options) {
+	const midiFlags = actor.flags[MODULE_ID] ?? {};
 	const advantage = midiFlags.advantage;
 	const disadvantage = midiFlags.disadvantage;
 	var withAdvantage = options.advantage;
 	var withDisadvantage = options.disadvantage;
 	//options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
+	if (rollType === "save" && options.isMagicSave) {
+		if ((actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol-rotv.MagicResistant").trim()))
+			withAdvantage = true;
+		;
+		const conditionData = createConditionData({ workflow: options.workflow, target: tokenForActor(actor), actor, item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid });
+		const magicResistanceFlags = foundry.utils.getProperty(actor, "flags.midi-qol-rotv.magicResistance");
+		if (await evalAllConditionsAsync(actor, "flags.midi-qol-rotv.magicResistance.all", conditionData, false) ||
+			await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.magicResistance.${abilityId}`, conditionData, false)) {
+			withAdvantage = true;
+		}
+		if (await evalAllConditionsAsync(actor, "flags.midi-qol-rotv.magicVulnerability.all", conditionData, false) ||
+			await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.magicVulnerability.${abilityId}`, conditionData, false)) {
+			withDisadvantage = true;
+		}
+	}
 	options.fastForward = options.fastForward || options.event?.fastKey;
 	if (advantage || disadvantage) {
-		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+		const conditionData = createConditionData({ workflow: options.workflow, target: tokenForActor(actor), actor, item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid });
 		if (advantage) {
-			if (advantage.all && evalCondition(advantage.all, conditionData)) {
+			if (await evalAllConditionsAsync(actor, "flags.midi-qol-rotv.advantage.all", conditionData)
+				|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.advantage.ability.all`, conditionData)
+				|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.advantage.ability.${rollType}.all`, conditionData)
+				|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.advantage.ability.${rollType}.${abilityId}`, conditionData)) {
 				withAdvantage = true;
-			}
-			if (advantage.ability) {
-				if (advantage.ability.all && evalCondition(advantage.ability.all, conditionData)) {
-					withAdvantage = true;
-				}
-				if (advantage.ability[rollType]) {
-					if ((advantage.ability[rollType].all && evalCondition(advantage.ability[rollType].all, conditionData))
-						|| (advantage.ability[rollType][abilityId] && evalCondition(advantage.ability[rollType][abilityId], conditionData))) {
-						withAdvantage = true;
-					}
-				}
 			}
 		}
 		if (disadvantage) {
-			if (disadvantage.all && evalCondition(disadvantage.all, conditionData)) {
+			if (await evalAllConditionsAsync(actor, "flags.midi-qol-rotv.disadvantage.all", conditionData)
+				|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.disadvantage.ability.all`, conditionData)
+				|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.disadvantage.ability.${rollType}.all`, conditionData)
+				|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.disadvantage.ability.${rollType}.${abilityId}`, conditionData)) {
 				withDisadvantage = true;
-			}
-			if (disadvantage.ability) {
-				if (disadvantage.ability.all && evalCondition(disadvantage.ability.all, conditionData)) {
-					withDisadvantage = true;
-				}
-				if (disadvantage.ability[rollType]) {
-					if ((disadvantage.ability[rollType].all && evalCondition(disadvantage.ability[rollType].all, conditionData))
-						|| (disadvantage.ability[rollType][abilityId] && evalCondition(disadvantage.ability[rollType][abilityId], conditionData))) {
-						withDisadvantage = true;
-					}
-				}
 			}
 		}
 	}
@@ -534,49 +666,50 @@ export function procAbilityAdvantage(actor, rollType, abilityId, options) {
 	options.event = {};
 	return options;
 }
-export function procAdvantageSkill(actor, skillId, options) {
-	const midiFlags = actor.flags["midi-qol-rotv"];
+export async function procAdvantageSkill(actor, skillId, options) {
+	const midiFlags = actor.flags[MODULE_ID];
 	const advantage = midiFlags?.advantage;
 	const disadvantage = midiFlags?.disadvantage;
 	var withAdvantage = options.advantage;
 	var withDisadvantage = options.disadvantage;
 	if (advantage || disadvantage) {
-		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
-		if (advantage?.all && evalCondition(advantage.all, conditionData)) {
+		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor, item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid });
+		if (await evalAllConditionsAsync(actor, "flags.midi-qol-rotv.advantage.all", conditionData)
+			|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.advantage.skill.all`, conditionData)
+			|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.advantage.skill.${skillId}`, conditionData)) {
 			withAdvantage = true;
 		}
-		if (advantage?.skill) {
-			if ((advantage.skill.all && evalCondition(advantage.skill.all, conditionData))
-				|| (advantage.skill[skillId] && evalCondition(advantage.skill[skillId], conditionData))) {
-				withAdvantage = true;
-			}
-		}
-		if (disadvantage?.all && evalCondition(disadvantage.all, conditionData)) {
+		if (await evalAllConditionsAsync(actor, "flags.midi-qol-rotv.disadvantage.all", conditionData)
+			|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.disadvantage.skill.all`, conditionData)
+			|| await evalAllConditionsAsync(actor, `flags.midi-qol-rotv.disadvantage.skill.${skillId}`, conditionData)) {
 			withDisadvantage = true;
-		}
-		if (disadvantage?.skill) {
-			if ((disadvantage.skill.all && evalCondition(disadvantage.skill.all, conditionData))
-				|| (disadvantage.skill[skillId] && evalCondition(disadvantage.skill[skillId], conditionData))) {
-				withDisadvantage = true;
-			}
 		}
 	}
 	options.advantage = withAdvantage;
 	options.disadvantage = withDisadvantage;
 	return options;
 }
-let debouncedATRefresh = debounce(_midiATIRefresh, 30);
+let debouncedATRefresh = foundry.utils.debounce(_midiATIRefresh, 30);
 function _midiATIRefresh(template) {
+	// We don't have an item to check auto targeting with, so just use the midi setting
 	if (!canvas?.tokens)
 		return;
-	if (configSettings.autoTarget === "none")
+	let autoTarget = getAutoTarget(template.item);
+	if (autoTarget === "none")
 		return;
-	if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
+	if (autoTarget === "dftemplates" && installedModules.get("df-templates"))
 		return; // df-templates will handle template targeting.
-	if (configSettings.autoTarget === "dfwalledTemplates" && installedModules.get("walledtemplates"))
-		return; // walled templates will handle template targeting.
-	if (installedModules.get("levelsvolumetrictemplates")) {
-		setProperty(template, "flags.levels.elevation", installedModules.get("levels").nextTemplateHeight ?? installedModules.get("levels").lastTokenForTemplate?.elevation);
+	if (installedModules.get("levelsvolumetrictemplates") && !["walledtemplates"].includes(autoTarget)) {
+		//@ts-expect-error CONFIG.Levels
+		const levelsTemplateData = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
+		if (!template.document.elevation !== levelsTemplateData.elevation) {
+			//@ts-expect-error
+			if (game.release.generation >= 12) {
+				template.document.elevation = levelsTemplateData.elevation;
+			}
+			else
+				foundry.utils.setProperty(template.document, "flags.levels.elevation", levelsTemplateData.elevation);
+		}
 		// Filter which tokens to pass - not too far wall blocking is left to levels.
 		let distance = template.distance;
 		const dimensions = canvas?.dimensions || { size: 1, distance: 1 };
@@ -590,19 +723,25 @@ function _midiATIRefresh(template) {
 			const centerDist = r.distance;
 			if (centerDist > distance + maxExtension)
 				return false;
-			//@ts-ignore
-			if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.system.attributes.hp.value <= 0)
+			if (["alwaysIgnoreIncapcitated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(tk, debugEnabled > 0))
+				return false;
+			if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(autoTarget) && checkDefeated(tk))
 				return false;
 			return true;
 		});
 		if (tokensToCheck.length > 0) {
-			//@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
+			//@ts-expect-error compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
 			VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
 		}
 	}
 	else {
 		const distance = template.distance ?? 0;
-		templateTokens({ x: template.x, y: template.y, shape: template.shape, distance });
+		if (template.item) {
+			templateTokens(template, getTokenForActor(template.item.parent), !foundry.utils.getProperty(template.item, "flags.midi-qol-rotv.AoETargetTypeIncludeSelf"), foundry.utils.getProperty(template, "item.flags.midi-qol-rotv.AoETargetType"), autoTarget);
+			return true;
+		}
+		else
+			templateTokens(template);
 		return true;
 	}
 	return true;
@@ -614,14 +753,16 @@ function midiATRefresh(wrapped) {
 export function _prepareDerivedData(wrapped, ...args) {
 	wrapped(...args);
 	try {
-		if (checkRule("challengeModeArmor")) {
+		if (!this.system.abilities?.dex)
+			return;
+		if (![false, undefined, "none"].includes(checkRule("challengeModeArmor"))) {
 			const armorDetails = this.system.attributes.ac ?? {};
 			const ac = armorDetails?.value ?? 10;
 			const equippedArmor = armorDetails.equippedArmor;
 			let armorAC = equippedArmor?.system.armor.value ?? 10;
 			const equippedShield = armorDetails.equippedShield;
 			const shieldAC = equippedShield?.system.armor.value ?? 0;
-			if (checkRule("challengeModeArmorScale")) {
+			if (checkRule("challengeModeArmor") !== "challenge") {
 				switch (armorDetails.calc) {
 					case 'flat':
 						armorAC = (ac.flat ?? 10) - this.system.abilities.dex.mod;
@@ -657,6 +798,11 @@ export function _prepareDerivedData(wrapped, ...args) {
 				;
 			}
 			else {
+				if (!this.system.abilities) {
+					console.error("midi-qol-rotv | challenge mode armor failed to find abilities");
+					console.error(this);
+					return;
+				}
 				let dexMod = this.system.abilities.dex.mod;
 				if (equippedArmor?.system.armor.type === "heavy")
 					dexMod = 0;
@@ -668,16 +814,109 @@ export function _prepareDerivedData(wrapped, ...args) {
 		}
 	}
 	catch (err) {
-		console.warn("midi-qol-rotv failed to prepare derived data", err);
+		const message = "midi-qol-rotv failed to prepare derived data";
+		console.error(message, err);
+		TroubleShooter.recordError(err, message);
 	}
 }
+let currentDAcalculateDamage;
+let currentDAGetTargetOptions;
 export function initPatching() {
 	libWrapper = globalThis.libWrapper;
-	libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
 	// For new onuse macros stuff.
-	libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
-	libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
-	libWrapper.register("midi-qol-rotv", "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
+	libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
+	currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype.calculateDamage;
+	if (window?.customElements?.get("damage-application")?.prototype?.calculateDamage) {
+		currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype?.calculateDamage;
+		//@ts-expect-error
+		window.customElements.get("damage-application").prototype.calculateDamage = _DAcalculateDamage;
+	}
+	if (window?.customElements?.get("damage-application")?.prototype?.getTargetOptions) {
+		currentDAGetTargetOptions = window.customElements.get("damage-application")?.prototype?.getTargetOptions;
+		//@ts-expect-error
+		window.customElements.get("damage-application").prototype.getTargetOptions = _DAgetTargetOptions;
+	}
+}
+function _DAgetTargetOptions(...args) {
+	let [uuid] = args;
+	const options = currentDAGetTargetOptions.bind(this)(...args);
+	// const damageType = getProperty(this, `damages.flags.${MODULE_ID}.damageType`);
+	const damageType = this.damages?.flags?.[MODULE_ID]?.damageType;
+	let targetDetails;
+	if (damageType) {
+		const targets = this?.chatMessage?.flags?.rotv?.targets ?? [];
+		targetDetails = targets.find(target => target.uuid === uuid);
+		if (!targetDetails)
+			return options;
+		options.midi = foundry.utils.duplicate(targetDetails);
+		const saveMult = targetDetails.saveMults?.[damageType];
+		if (targetDetails.saved) {
+			foundry.utils.setProperty(options, "midi.saveMultiplier", saveMult ?? 0.5);
+		}
+		if (saveMult !== undefined) {
+			if (targetDetails.superSaver && saveMult === 0.5) {
+				foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 0.5);
+			}
+			if (targetDetails.semiSuperSaver && saveMult === 0.5) {
+				foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
+			}
+		}
+		if (targetDetails.uncannyDodge) {
+			foundry.utils.setProperty(options, "midi.uncannyDodge", true);
+		}
+	}
+	return options;
+}
+function _DAcalculateDamage(actor, options) {
+	const { temp, total, active } = currentDAcalculateDamage.bind(this)(actor, options);
+	active.absorption = new Set();
+	active.saved = new Set();
+	active.superSaver = new Set();
+	active.semiSuperSaver = new Set();
+	active.spell = new Set();
+	active.magic = new Set();
+	active.uncannyDodge = new Set();
+	active.nonmagic = new Set();
+	active.DR = new Set();
+	const damages = actor.calculateDamage(this.damages, options);
+	for (const damage of damages) {
+		if (damage.active.absorption)
+			active.absorption.add(damage.type);
+		if (damage.active.spell)
+			active.spell.add(damage.type);
+		if (damage.active.magic)
+			active.magic.add(damage.type);
+		if (damage.active.nonmagic)
+			active.nonmagic.add(damage.type);
+		if (damage.active.DR)
+			active.DR.add(damage.type);
+		if (damage.active.superSaver)
+			active.superSaver.add(damage.type);
+		else if (damage.active.semiSuperSaver)
+			active.semiSuperSaver.add(damage.type);
+		else if (damage.active.saved)
+			active.saved.add(damage.type);
+		if (damage.active.uncannyDodge)
+			active.uncannyDodge.add(damage.type);
+	}
+	const union = t => {
+		if (foundry.utils.getType(options.ignore?.[t]) === "Set")
+			active[t] = active[t].union(options.ignore[t]);
+	};
+	union("absorption");
+	union("spell");
+	union("magic");
+	union("nonmagic");
+	union("saved");
+	union("uncannyDodge");
+	union("DR");
+	return { temp, total, active };
 }
 export function _onFocusIn(event) {
 	const formElements = [
@@ -688,33 +927,78 @@ export function _onFocusIn(event) {
 }
 export function actorPrepareData(wrapped) {
 	try {
+		foundry.utils.setProperty(this, "flags.midi-qol-rotv.onUseMacroName", foundry.utils.getProperty(this._source, "flags.midi-qol-rotv.onUseMacroName"));
+		if (debugEnabled > 0)
+			for (let effect of this.appliedEffects) {
+				for (let change of effect.changes) {
+					if (change.key === "flags.midi-qol-rotv.onUseMacroName") {
+						if (change.mode !== CONST.ACTIVE_EFFECT_MODES.CUSTOM) {
+							error("onUseMacro effect mode is not custom", `Actor ${this.name} Effect: ${effect.name} ${this.uuid}`);
+							TroubleShooter.recordError(new Error("onUseMacro effect mode is not custom"), `Actor ${this.name} Effect: ${effect.name} ${this.uuid} `);
+							change.mode = CONST.ACTIVE_EFFECT_MODES.CUSTOM;
+						}
+					}
+				}
+			}
+		processTraits(this);
 		wrapped();
 		prepareOnUseMacroData(this);
+		/*
+		const deprecatedKeys = ["silver", "adamant", "spell", "nonmagic", "magic", "physical"];
+		for (let traitKey of ["dr", "di", "dv", "sdr", "sdi", "sdv"]) {
+		for (let deprecatedKey of deprecatedKeys) {
+			if (this.system.traits[traitKey]?.value.has(deprecatedKey)) {
+			const message = `MidiQOL ${traitKey} value ${deprecatedKey} is no longer supported in Actor ${this.name} ${this.uuid} .Set in custom traits instead`
+			if (ui.notifications)
+				ui.notifications?.error(message);
+			else error(message);
+			TroubleShooter.recordError(new Error("Trait key invalid"), message);
+			}
+		}
+		}
+		*/
 	}
 	catch (err) {
+		const message = `actor prepare data ${this?.name}`;
+		TroubleShooter.recordError(err, message);
 	}
 }
 export function itemPrepareData(wrapped) {
+	foundry.utils.setProperty(this, "flags.midi-qol-rotv.onUseMacroName", foundry.utils.getProperty(this._source, "flags.midi-qol-rotv.onUseMacroName"));
+	if (debugEnabled > 0)
+		for (let effect of this.effects) {
+			for (let change of effect.changes) {
+				if (change.key === "flags.midi-qol-rotv.onUseMacroName") {
+					if (change.mode !== CONST.ACTIVE_EFFECT_MODES.CUSTOM) {
+						error("onUseMacro effect mode is not custom", `Actor: ${this.parent.name} Item: ${this.name} Effect: ${effect.name} ${this.uuid} `);
+						TroubleShooter.recordError(new Error("onUseMacro effect mode is not custom - mode treated as custom"), `Actor: ${this.parent.name} Item: ${this.name} Effect: ${effect.name} ${this.uuid} `);
+						change.mode = CONST.ACTIVE_EFFECT_MODES.CUSTOM;
+					}
+				}
+			}
+		}
 	wrapped();
 	prepareOnUseMacroData(this);
 }
 export function prepareOnUseMacroData(actorOrItem) {
 	try {
-		const macros = getProperty(actorOrItem, 'flags.midi-qol-rotv.onUseMacroName');
-		setProperty(actorOrItem, "flags.midi-qol-rotv.onUseMacroParts", new OnUseMacros(macros ?? null));
+		const macros = foundry.utils.getProperty(actorOrItem, 'flags.midi-qol-rotv.onUseMacroName');
+		foundry.utils.setProperty(actorOrItem, "flags.midi-qol-rotv.onUseMacroParts", new OnUseMacros(macros ?? null));
 	}
 	catch (err) {
-		console.warn("midi-qol-rotv | failed to prepare onUse macro data", err);
+		const message = `midi-qol-rotv | failed to prepare onUse macro data ${actorOrItem?.name}`;
+		console.warn(message, err);
+		TroubleShooter.recordError(err, message);
 	}
 }
 export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
 	try {
-		const macros = getProperty(itemOrActor._source, "flags.midi-qol-rotv.onUseMacroName");
-		const macroParts = new OnUseMacros(macros ?? null);
-		const macroChanges = getProperty(changes, "flags.midi-qol-rotv.onUseMacroParts") ?? {};
+		const macroChanges = foundry.utils.getProperty(changes, "flags.midi-qol-rotv.onUseMacroParts") ?? {};
 		//@ts-ignore
-		if (isEmpty(macroChanges))
+		if (foundry.utils.isEmpty(macroChanges))
 			return true;
+		const macros = foundry.utils.getProperty(itemOrActor._source, "flags.midi-qol-rotv.onUseMacroName");
+		const macroParts = new OnUseMacros(macros ?? null);
 		if (!Array.isArray(macroChanges.items)) { // we have an update from editing the macro changes
 			for (let keyString in macroChanges.items) {
 				let key = Number(keyString);
@@ -734,283 +1018,256 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
 			}
 		}
 		let macroString = OnUseMacros.parseParts(macroParts).items.map(oum => oum.toString()).join(",");
-		changes.flags["midi-qol-rotv"].onUseMacroName = macroString;
-		delete changes.flags["midi-qol-rotv"].onUseMacroParts;
+		changes.flags[MODULE_ID].onUseMacroName = macroString;
+		delete changes.flags[MODULE_ID].onUseMacroParts;
 		itemOrActor.updateSource({ "flags.midi-qol-rotv.-=onUseMacroParts": null });
 	}
 	catch (err) {
-		delete changes.flags["midi-qol-rotv"].onUseMacroParts;
+		delete changes.flags[MODULE_ID].onUseMacroParts;
 		itemOrActor.updateSource({ "flags.midi-qol-rotv.-=onUseMacroParts": null });
-		console.warn("midi-qol-rotv | failed in preUpdateItemActor onUse Macro", err);
+		const message = `midi-qol-rotv | failed in preUpdateItemActor onUse Macro for ${itemOrActor?.name} ${itemOrActor?.uuid}`;
+		console.warn(message, err);
+		TroubleShooter.recordError(err, message);
 	}
 	return true;
 }
 ;
-export function getInitiativeRoll(wrapped, options = { advantageMode: 0 }) {
-	let disadv = this.getFlag(game.system.id, "initiativeDisadv");
-	let adv = this.getFlag(game.system.id, "initiativeAdv");
-	const flags = this.flags["midi-qol-rotv"] ?? {};
-	const advFlags = flags.advantage;
-	const disadvFlags = flags.disadvantage;
-	if (advFlags || disadvFlags) {
-		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
-		if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
-			|| (advFlags?.ability?.check?.all && evalCondition(advFlags.ability.check.all, conditionData))
-			|| (advFlags?.advantage?.ability?.check?.dex && evalCondition(advFlags.advantage.ability?.check?.dex, conditionData))) {
-			//@ts-expect-error
-			adv = true || (options.advantageMode === game.rotv.dice.D20Roll.ADV_MODE.ADVANTAGE);
-		}
-		if ((disadvFlags?.all && evalCondition(disadvFlags.all, conditionData))
-			|| (disadvFlags?.ability?.check?.all && evalCondition(disadvFlags.ability.check.all, conditionData))
-			|| (disadvFlags?.disadvantage?.ability?.check?.dex && evalCondition(disadvFlags.disadvantage.ability?.check?.dex, conditionData))) {
-			//@ts-expect-error
-			disadv = true || (options.advantageMode === game.rotv.dice.D20Roll.ADV_MODE.DISADVANTAGE);
-		}
+export async function rollInitiativeDialog(wrapped, rollOptions = { fastForward: autoFastForwardAbilityRolls }) {
+	const pressedKeys = foundry.utils.duplicate(globalThis.MidiKeyManager.pressedKeys);
+	const adv = pressedKeys.advantage;
+	const disadv = pressedKeys.disadvantage;
+	if (autoFastForwardAbilityRolls)
+		rollOptions.fastForward = true;
+	//@ts-expect-error .dice
+	const dice = game.system.dice.D20Roll;
+	rollOptions.advantageMode = dice.ADV_MODE.NORMAL;
+	if (adv && !disadv) {
+		rollOptions.advantageMode = dice.ADV_MODE.ADVANTAGE;
+		rollOptions.fastForward = true;
+	}
+	if (!adv && disadv) {
+		rollOptions.advantageMode = dice.ADV_MODE.DISADVANTAGE;
+		rollOptions.fastForward = true;
+	}
+	if (!rollOptions.fastForward) {
+		return wrapped(rollOptions);
+	}
+	const roll = this.getInitiativeRoll(rollOptions);
+	this._cachedInitiativeRoll = roll;
+	rollOptions.createCombatants = true;
+	await this.rollInitiative({ createCombatants: true });
+	delete this._cahcedInitiativeRoll;
+}
+export function getInitiativeRoll(wrapped, options = { advantageMode: 0, fastForward: autoFastForwardAbilityRolls }) {
+	//@ts-expect-error
+	const D20Roll = game.rotv.dice.D20Roll;
+	let disadv = options.advantageMode === D20Roll.ADV_MODE.DISADVANTAGE;
+	let adv = options.advantageMode === D20Roll.ADV_MODE.ADVANTAGE;
+	const init = this.system.attributes.init.value ?? "dex";
+	const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+	if (evalAllConditions(this, "flags.midi-qol-rotv.advantage.all", conditionData)
+		|| evalAllConditions(this, "flags.midi-qol-rotv.advantage.ability.check.all", conditionData)
+		|| evalAllConditions(this, `flags.midi-qol-rotv.advantage.ability.check.${init}`, conditionData)
+		|| evalAllConditions(this, `flags.${game.system.id}.initiativeAdv`, conditionData)) {
+		adv = true;
+	}
+	if (evalAllConditions(this, "flags.midi-qol-rotv.disadvantage.all", conditionData)
+		|| evalAllConditions(this, "flags.midi-qol-rotv.disadvantage.ability.check.all", conditionData)
+		|| evalAllConditions(this, `flags.midi-qol-rotv.disadvantage.ability.check.${init}`, conditionData)
+		|| evalAllConditions(this, `flags.${game.system.id}.initiativeDisadv`, conditionData)) {
+		disadv = true;
 	}
 	if (adv && disadv)
 		options.advantageMode = 0;
-	//@ts-expect-error
 	else if (adv)
-		options.advantageMode = game.rotv.dice.D20Roll.ADV_MODE.ADVANTAGE;
-	//@ts-expect-error
+		options.advantageMode = D20Roll.ADV_MODE.ADVANTAGE;
 	else if (disadv)
-		options.advantageMode = game.rotv.dice.D20Roll.ADV_MODE.DISADVANTAGE;
+		options.advantageMode = D20Roll.ADV_MODE.DISADVANTAGE;
+	if (autoFastForwardAbilityRolls) {
+		options.fastForward = true;
+	}
 	return wrapped(options);
 }
-export function _getInitiativeFormula(wrapped) {
-	const original = wrapped();
-	const actor = this.actor;
-	if (!actor)
-		return "1d20";
-	let disadv = actor.getFlag(game.system.id, "initiativeDisadv");
-	let adv = actor.getFlag(game.system.id, "initiativeAdv");
-	const flags = actor.flags["midi-qol-rotv"] ?? {};
-	const advFlags = flags.advantage;
-	const disadvFlags = flags.disadvantage;
-	if (advFlags || disadvFlags) {
-		const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
-		if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
-			|| (advFlags?.ability?.check?.all && evalCondition(advFlags.ability.check.all, conditionData))
-			|| (advFlags?.advantage?.ability?.check?.dex && evalCondition(advFlags.advantage.ability?.check?.dex, conditionData))) {
-			adv = true;
-		}
-		if ((disadvFlags?.all && evalCondition(disadvFlags.all, conditionData))
-			|| (disadvFlags?.ability?.check?.all && evalCondition(disadvFlags.ability.check.all, conditionData))
-			|| (disadvFlags?.disadvantage?.ability?.check?.dex && evalCondition(disadvFlags.disadvantage.ability?.check?.dex, conditionData))) {
-			disadv = true;
-		}
-	}
-	if (!disadv && !adv)
-		return original;
-	if (!actor)
-		return "1d20";
-	const actorData = actor.system;
-	const init = actorData.attributes.init;
-	const rollData = actor.getRollData();
-	// Construct initiative formula parts
-	let nd = 1;
-	let mods = "";
-	if ((game.system.id === "rotv" || game.system.id === "n5e") && actor.getFlag("rotv", "halflingLucky"))
-		mods += "r1=1";
-	if (adv && !disadv) {
-		nd = 2;
-		mods += "kh";
-	}
-	else if (!adv && disadv) {
-		nd = 2;
-		mods += "kl";
-	}
-	const parts = [
-		`${nd}d20${mods}`,
-		init.mod,
-		(init.prof.term !== "0") ? init.prof.term : null,
-		(init.bonus !== 0) ? init.bonus : null
-	];
-	// Ability Check Bonuses
-	const dexCheckBonus = actorData.abilities.dex.bonuses?.check;
-	const globalCheckBonus = actorData.bonuses?.abilities?.check;
-	if (dexCheckBonus)
-		parts.push(Roll.replaceFormulaData(dexCheckBonus, rollData));
-	if (globalCheckBonus)
-		parts.push(Roll.replaceFormulaData(globalCheckBonus, rollData));
-	// Optionally apply Dexterity tiebreaker
-	const tiebreaker = game.settings.get(game.system.id, "initiativeDexTiebreaker");
-	if (tiebreaker)
-		parts.push(actor.system.abilities.dex.value / 100);
-	return parts.filter(p => p !== null).join(" + ");
-}
-;
-async function _preDeleteActiveEffect(wrapped, ...args) {
+export function getItemEffectsToDelete(args) {
+	warn("getItemEffectsToDelete: started", globalThis.DAE?.actionQueue);
+	let effectsToDelete;
+	let { actor, origin, ignore, ignoreTransfer, options } = args;
 	try {
-		if ((this.parent instanceof CONFIG.Actor.documentClass)) {
-			let [options, user] = args;
-			const effect = this;
-			// Handle removal of reaction effect
-			if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.flags?.core?.statusId) {
-				await this.parent.unsetFlag("midi-qol-rotv", "reactionCombatRound");
-			}
-			// Handle removal of bonus action effect
-			if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsBonusAction()?._id === this.flags?.core?.statusId) {
-				await this.parent.unsetFlag("midi-qol-rotv", "bonusActionCombatRound");
-			}
-			const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
-			if (!checkConcentration)
-				return;
-			let concentrationLabel = i18n("midi-qol-rotv.Concentrating");
-			if (installedModules.get("dfreds-convenient-effects")) {
-				let concentrationId = "Convenient Effect: Concentrating";
-				let statusEffect = CONFIG.statusEffects.find(se => se.id === concentrationId);
-				if (statusEffect)
-					concentrationLabel = statusEffect.label;
-			}
-			else if (installedModules.get("combat-utility-belt")) {
-				concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName");
-			}
-			let isConcentration = effect.label === concentrationLabel;
-			const origin = MQfromUuid(effect.origin);
-			if (isConcentration)
-				await removeConcentration(effect.parent, this.uuid);
-			else if (origin instanceof CONFIG.Item.documentClass && origin.parent instanceof CONFIG.Actor.documentClass) {
-				const concentrationData = getProperty(origin.parent, "flags.midi-qol-rotv.concentration-data");
-				if (concentrationData && effect.origin === concentrationData.uuid) {
-					const allConcentrationTargets = concentrationData.targets.filter(target => {
-						let actor = MQfromActorUuid(target.actorUuid);
-						const hasEffects = actor.effects.some(effect => effect.origin === concentrationData.uuid
-							&& !effect.flags.dae.transfer
-							&& effect.uuid !== this.uuid);
-						return hasEffects;
-					});
-					const concentrationTargets = concentrationData.targets.filter(target => {
-						let actor = MQfromActorUuid(target.actorUuid);
-						const hasEffects = actor.effects.some(effect => effect.origin === concentrationData.uuid
-							&& !effect.flags.dae.transfer
-							&& effect.uuid !== this.uuid
-							&& effect.label !== concentrationLabel);
-						return hasEffects;
-					});
-					if (["effects", "effectsTemplates"].includes(configSettings.removeConcentrationEffects)
-						&& concentrationTargets.length < 1
-						&& concentrationTargets.length < concentrationData.targets.length
-						&& concentrationData.templates.length === 0
-						&& concentrationData.removeUuids.length === 0) {
-						// non concentration effects left
-						await removeConcentration(origin.parent, this.uuid);
-					}
-					else if (concentrationData.targets.length !== allConcentrationTargets.length) {
-						// update the concentration data
-						concentrationData.targets = allConcentrationTargets;
-						await origin.parent.setFlag("midi-qol-rotv", "concentration-data", concentrationData);
-					}
-				}
-			}
+		if (!actor) {
+			return [];
 		}
+		//@ts-expect-error
+		effectsToDelete = actor?.appliedEffects?.filter(ef => {
+			if (installedModules.get("times-up")) {
+				if (globalThis.TimesUp.isEffectExpired(ef, { combat: game.combat }))
+					return false;
+			}
+			return ef.origin === origin
+				&& !ignore.includes(ef.uuid)
+				&& (!ignoreTransfer || ef.flags?.dae?.transfer !== true);
+		}).map(ef => ef.id);
+		warn("getItemEffectsToDelete: effectsToDelete ", actor.name, effectsToDelete, options);
+		return effectsToDelete;
 	}
 	catch (err) {
-		console.warn("midi-qol-rotv | error deleting effect: ", err);
-	}
-	finally {
-		return wrapped(...args);
+		const message = `getItemEffectsToDelete item effects failed for ${actor.name} ${origin} ${effectsToDelete}`;
+		console.warn(message, err);
+		TroubleShooter.recordError(err, message);
+		return [];
 	}
 }
-export async function removeConcentration(actor, concentrationUuid) {
-	let result;
-	try {
-		const concentrationData = actor.getFlag("midi-qol-rotv", "concentration-data");
-		if (!concentrationData) {
-			return;
-		}
-		await actor.unsetFlag("midi-qol-rotv", "concentration-data");
-		if (concentrationData.templates) {
-			for (let templateUuid of concentrationData.templates) {
-				const template = await fromUuid(templateUuid);
-				if (template)
-					await template.delete();
-			}
-		}
-		for (let removeUuid of concentrationData.removeUuids) {
-			const entity = await fromUuid(removeUuid);
-			if (entity)
-				await entity.delete(); // TODO check if this needs to be run as GM
-		}
-		if (actor.isToken)
-			setTimeout(() => socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true }), 200);
-		else
-			result = await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
-	}
-	catch (err) {
-		error("error when attempting to remove concentration ", err);
-	}
-	return result;
-}
-async function zeroHPExpiry(actor, update, options, user) {
-	const hpUpdate = getProperty(update, "system.attributes.hp.value");
+export async function zeroHPExpiry(actor, update, options, user) {
+	const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
 	if (hpUpdate !== 0)
 		return;
 	const expiredEffects = [];
-	for (let effect of actor.effects) {
+	for (let effect of actor.appliedEffects) {
 		if (effect.flags?.dae?.specialDuration?.includes("zeroHP"))
-			expiredEffects.push(effect.id);
+			expiredEffects.push(effect);
 	}
 	if (expiredEffects.length > 0)
-		await actor.deleteEmbeddedDocuments("ActiveEffect", expiredEffects, { "expiry-reason": "midi-qol-rotv:zeroHP" });
+		await expireEffects(actor, expiredEffects, { "expiry-reason": "midi-qol-rotv:zeroHP" });
 }
-async function checkWounded(actor, update, options, user) {
-	const hpUpdate = getProperty(update, "system.attributes.hp.value");
+export async function checkWounded(actor, update, options, user) {
+	const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
+	const vitalityResource = checkRule("vitalityResource");
+	//@ts-expect-error
+	const dfreds = game.dfreds;
+	let vitalityUpdate = vitalityResource && foundry.utils.getProperty(update, vitalityResource.trim());
 	// return wrapped(update,options,user);
-	if (hpUpdate === undefined)
+	if (hpUpdate === undefined && (!vitalityResource || vitalityUpdate === undefined))
 		return;
 	const attributes = actor.system.attributes;
-	if (configSettings.addWounded > 0) {
-		//@ts-ignore
-		const CEWounded = game.dfreds?.effects?._wounded;
-		const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
-		const needsWounded = hpUpdate > 0 && hpUpdate < woundedLevel;
-		if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
-			const wounded = await ConvenientEffectsHasEffect(CEWounded.name, actor, false);
+	const needsBeaten = vitalityResource ? vitalityUpdate <= 0 : attributes.hp.value <= 0;
+	if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
+		const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
+		const woundedStatus = getWoundedStatus();
+		if (!woundedStatus) {
+			const message = "wounded status condition not set - please update your midi-qol-rotv wounded condition on the mechanics tab";
+			TroubleShooter.recordError(new Error(message), "In check wounded");
+			ui.notifications?.warn(`midi-qol-rotv | ${message}`);
+		}
+		else if (installedModules.get("dfreds-convenient-effects") && woundedStatus.id.startsWith("Convenient Effect:")) {
+			const wounded = await ConvenientEffectsHasEffect((woundedStatus.name), actor, false);
 			if (wounded !== needsWounded) {
-				//@ts-ignore
-				await game.dfreds?.effectInterface.toggleEffect(CEWounded.name, { overlay: false, uuids: [actor.uuid] });
+				if (needsWounded)
+					await dfreds.effectInterface?.addEffectWith({ effectData: woundedStatus, uuid: actor.uuid, overlay: configSettings.addWoundedStyle === "overlay" });
+				else
+					await actor.effects.find(ef => ef.name === woundedStatus.name)?.delete();
 			}
 		}
 		else {
-			const tokens = actor.getActiveTokens();
-			const controlled = tokens.filter(t => t._controlled);
-			const token = controlled.length ? controlled.shift() : tokens.shift();
-			const bleeding = CONFIG.statusEffects.find(se => se.id === "bleeding");
-			if (bleeding && token)
-				await token.toggleEffect(bleeding.icon, { overlay: false, active: needsWounded });
+			const token = tokenForActor(actor);
+			if (woundedStatus && token) {
+				if (!needsWounded) {
+					//@ts-expect-error
+					if (game.release.generation >= 12) {
+						// Cater to the possibility that the setings changed while the effect was applied
+						//@ts-expect-error
+						await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: true, active: false });
+						//@ts-expect-error
+						await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: false, active: false });
+					}
+					else {
+						await token.toggleEffect(woundedStatus, { overlay: true, active: false });
+						await token.toggleEffect(woundedStatus, { overlay: false, active: false });
+					}
+				}
+				else {
+					//@ts-expect-error
+					if (!token.document.hasStatusEffect(woundedStatus.id)) {
+						//@ts-expect-error
+						if (game.release.generation >= 12) {
+							//@ts-expect-error
+							await token.actor?.toggleStatusEffect(woundedStatus.id, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
+						}
+						else {
+							await token.toggleEffect(woundedStatus, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
+						}
+					}
+				}
+			}
 		}
 	}
 	if (configSettings.addDead !== "none") {
-		const needsDead = hpUpdate <= 0;
-		if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-			const effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
-			const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
-			if ((needsDead !== hasEffect)) {
-				if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE rotv does not treat dead as dead for the combat tracker so update it by hand as well
-					let combatant;
-					if (actor.token)
-						combatant = game.combat?.getCombatantByToken(actor.token.id);
-					//@ts-ignore
-					else
-						combatant = game.combat?.getCombatantByActor(actor.id);
-					if (combatant)
-						await combatant.update({ defeated: needsDead });
-				}
-				//@ts-ignore
-				await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: configSettings.addDead === "overlay", uuids: [actor.uuid] });
+		let effect = getDeadStatus();
+		let useDefeated = true;
+		if ((actor.type === "character" || actor.hasPlayerOwner) && !vitalityResource) {
+			effect = getUnconsciousStatus();
+			useDefeated = effect === getDeadStatus();
+		}
+		if (!needsBeaten) {
+			await setDeadStatus(actor, { effect, useDefeated, makeDead: false });
+		}
+		else {
+			await setDeadStatus(actor, { effect, useDefeated, makeDead: needsBeaten });
+		}
+	}
+}
+async function setDeadStatus(actor, options) {
+	//@ts-expect-error
+	const dfreds = game.dfreds;
+	let { effect, useDefeated, makeDead } = options;
+	if (!effect)
+		return;
+	if (effect && installedModules.get("dfreds-convenient-effects") && effect.id.startsWith("Convenient Effect:")) {
+		const isBeaten = actor.effects.find(ef => ef.name === effect?.name) !== undefined;
+		if ((makeDead !== isBeaten)) {
+			let combatant;
+			if (actor.token)
+				combatant = game.combat?.getCombatantByToken(actor.token.id);
+			//@ts-ignore
+			else
+				combatant = game.combat?.getCombatantByActor(actor.id);
+			if (combatant && useDefeated) {
+				await combatant.update({ defeated: makeDead });
+			}
+			if (makeDead) {
+				await dfreds.effectInterface?.addEffectWith({ effectData: effect, uuid: actor.uuid, overlay: configSettings.addDead === "overlay" });
+			}
+			else { // remove beaten condition
+				await dfreds.effectInterface?.removeEffect({ effectName: effect?.name, uuid: actor.uuid });
+			}
+		}
+	}
+	else {
+		//@ts-expect-error generation
+		if (game.release.generation >= 12) {
+			// V12 uses an actor
+			const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
+			if (isBeaten !== makeDead) {
+				let combatant;
+				if (actor.token)
+					combatant = game.combat?.getCombatantByToken(actor.token.id);
+				//@ts-expect-error
+				else
+					combatant = game.combat?.getCombatantByActor(actor.id);
+				if (combatant && useDefeated)
+					await combatant.update({ defeated: makeDead });
+				await actor.toggleStatusEffect(effect.id, { overlay: configSettings.addDead === "overlay", active: makeDead });
+				const token = tokenForActor(actor);
+				//@ts-expect-error TODO find out why such a long delay is needed
+				setTimeout(() => token._onApplyStatusEffect(effect.id, makeDead), 1000);
 			}
 		}
 		else {
-			const tokens = actor.getActiveTokens();
-			const controlled = tokens.filter(t => t._controlled);
-			const token = controlled.length ? controlled.shift() : tokens.shift();
+			let token = tokenForActor(actor); // V11 must use a token
 			if (token) {
-				if (actor.type === "character" || actor.hasPlayerOwner) {
-					await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: configSettings.addDead === "overlay", active: needsDead });
-				}
-				else {
-					await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: configSettings.addDead === "overlay", active: needsDead });
+				const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
+				if (isBeaten !== makeDead) {
+					let combatant;
+					if (actor.token)
+						combatant = game.combat?.getCombatantByToken(actor.token.id);
+					//@ts-expect-error
+					else
+						combatant = game.combat?.getCombatantByActor(actor.id);
+					if (combatant && useDefeated)
+						await combatant.update({ defeated: makeDead });
+					if (effect) {
+						await token.toggleEffect(effect, { overlay: configSettings.addDead === "overlay", active: makeDead });
+						//@ts-expect-error TODO find out why such a long delay is needed
+						setTimeout(() => token._onApplyStatusEffect(effect.id, makeDead), 1500);
+					}
 				}
 			}
 		}
@@ -1022,123 +1279,302 @@ async function _preUpdateActor(wrapped, update, options, user) {
 		await zeroHPExpiry(this, update, options, user);
 	}
 	catch (err) {
-		console.warn("midi-qol-rotv | preUpdateActor failed ", err);
+		const message = `midi-qol-rotv | _preUpdateActor failed `;
+		console.warn(message, err);
+		TroubleShooter.recordError(err, message);
 	}
 	finally {
 		return wrapped(update, options, user);
 	}
 }
+function itemSheetDefaultOptions(wrapped) {
+	const options = wrapped();
+	const modulesToCheck = ["magic-items-2", "magicitems", "items-with-spells-RotV", "ready-set-roll-RotV"];
+	const installedModules = modulesToCheck.filter(mid => game.modules.get(mid)?.active).length + (configSettings.midiFieldsTab ? 1 : 0);
+	const newWidth = 560 + Math.max(0, (installedModules - 2) * 100);
+	if (options.width < newWidth) {
+		log(`increasing item sheet width from ${options.width} to ${newWidth}`);
+		options.width = newWidth;
+	}
+	return options;
+}
 export function readyPatching() {
 	if (game.system.id === "rotv" || game.system.id === "n5e") {
-		libWrapper.register("midi-qol-rotv", `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
+		libWrapper.register(MODULE_ID, `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
+		libWrapper.register(MODULE_ID, "game.system.applications.actor.TraitSelector.prototype.getData", preDamageTraitSelectorGetData, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['rotv.ActorSheetRotVCharacter'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['rotv.ActorSheetRotVNPC'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.Item.sheetClasses.base['rotv.ItemSheetRotV'].cls.defaultOptions", itemSheetDefaultOptions, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
+		// This controls whether to display the chat message or not
+		// rotv.damageActor handles picking up concentration item rolls
+		// processConcentrationSave handles doing the auto roll for concentration chat messages
+		libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.challengeConcentration", challengeConcentration, "MIXED");
 	}
-	else { // TODO find out what ItemSheetRelics is called in sw5e TODO work out how this is set for sw5e v10
-		libWrapper.register("midi-qol-rotv", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+	else { // TODO find out what itemsheetRotV is called in sw5e TODO work out how this is set for sw5e v10
+		libWrapper.register(MODULE_ID, "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+		libWrapper.register(MODULE_ID, "game.system.applications.actor.TraitSelector.prototype.getData", preDamageTraitSelectorGetData, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['sw5e.ActorSheet5eCharacter'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['sw5e.ActorSheet5eNPC'].cls.prototype._filterItems", _filterItems, "WRAPPER");
 	}
-	libWrapper.register("midi-qol-rotv", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
-	libWrapper.register("midi-qol-rotv", "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
-	libWrapper.register("midi-qol-rotv", "Notifications.prototype.notify", notificationNotify, "MIXED");
+	// Moved overtime processing to the updateCombat hook instead.
+	// libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
+	libWrapper.register(MODULE_ID, "Notifications.prototype.notify", notificationNotify, "MIXED");
 	//@ts-expect-error
-	if ((game.system.id === "rotv" && isNewerVersion("2.1.0", game.system.version)) || game.system.id !== "rotv") {
-		libWrapper.register("midi-qol-rotv", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
+	const gameVersion = game.system.version;
+	if ((game.system.id === "rotv" && foundry.utils.isNewerVersion("3.1.0", gameVersion))) {
+		if (ui.notifications)
+			ui.notifications.error(`rotv version ${gameVersion} is too old to support midi-qol-rotv, please update to 2.2.0 or later`);
+		else
+			error(`rotv version ${gameVersion} is too old to support midi-qol-rotv, please update to 3.2.0 or later`);
+	}
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getInitiativeRoll", getInitiativeRoll, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollInitiativeDialog", rollInitiativeDialog, "MIXED");
+	if (true) {
+		const effectClass = CONFIG.ActiveEffect.documentClass;
+		//@ts-expect-error .version
+		if (foundry.utils.isNewerVersion(game.system.version, "3.0.99")) {
+			const classStrings = [
+				"CONFIG.Actor.documentClass",
+				"CONFIG.Item.documentClass",
+				"CONFIG.Token.documentClass",
+				"CONFIG.MeasuredTemplate.documentClass",
+				"CONFIG.Tile.documentClass",
+				"CONFIG.AmbientLight.documentClass",
+				"CONFIG.AmbientSound.documentClass",
+				"CONFIG.Wall.documentClass",
+				"CONFIG.ActiveEffect.documentClass",
+			];
+			const addDependent = effectClass.prototype.addDependent ?? _addDependent;
+			const getDependents = effectClass.prototype.getDependents ?? _getDependents;
+			for (let classString of classStrings) {
+				const docClass = eval(classString);
+				if (!docClass)
+					continue;
+				if (!docClass.prototype.addDependent)
+					libWrapper.register(MODULE_ID, `${classString}.prototype._onDelete`, _onDelete, "WRAPPER");
+				if (!docClass.prototype.addDependent)
+					docClass.prototype.addDependent = addDependent;
+				//@ts-expect-error
+				if (foundry.utils.isNewerVersion("3.1.99", game.system.version)) {
+					if (!docClass.prototype.addDependents)
+						docClass.prototype.addDependents = addDependents;
+				}
+				if (!docClass.prototype.getDependents)
+					docClass.prototype.getDependents = getDependents;
+				if (!docClass.prototype.setDependents)
+					docClass.prototype.setDependents = setDependents;
+				if (!docClass.prototype.removeDependent)
+					docClass.prototype.removeDependent = removeDependent;
+				if (!docClass.prototype.clearDependents)
+					docClass.prototype.clearDependents = clearDependents;
+				if (!docClass.prototype.deleteAllDependents)
+					docClass.prototype.deleteAllDependents = deleteAllDependents;
+			}
+		}
+	}
+}
+function removeDependent(dependent) {
+	const id = game.system.id ?? MODULE_ID;
+	const dependents = (this.getFlag(id, "dependents") || []).filter(dep => dep.uuid !== dependent.uuid);
+	if (dependents.length === 0)
+		return this.unsetFlag(id, "dependents");
+	return this.setFlag(id, "dependents", dependents);
+}
+function setDependents(dependents) {
+	const id = game.system.id ?? MODULE_ID;
+	return this.setFlag(id, "dependents", dependents);
+}
+function clearDependents() {
+	const id = game.system.id ?? MODULE_ID;
+	return this.unsetFlag(id, "dependents");
+}
+async function deleteAllDependents() {
+	if (!game.user?.isGM)
+		return;
+	for (let dep of this.getDependents()) {
+		await dep.delete();
+	}
+	return this.clearDependents();
+}
+async function addDependents(...dependents) {
+	//@ts-expect-error
+	if (isNewerVersion(game.system.version, "3.1.99")) {
+		return this.addDependent(...dependents);
 	}
 	else {
-		libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype.getInitiativeRoll", getInitiativeRoll, "WRAPPER");
+		return _addDependent.bind(this)(...dependents);
 	}
-	libWrapper.register("midi-qol-rotv", "CONFIG.ActiveEffect.documentClass.prototype._preDelete", _preDeleteActiveEffect, "WRAPPER");
-	libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype._preUpdate", _preUpdateActor, "WRAPPER");
-	libWrapper.register("midi-qol-rotv", "game.system.applications.DamageTraitSelector.prototype.getData", preDamageTraitSelectorGetData, "WRAPPER");
+}
+/**
+* Record another effect as a dependent of this one.
+* @param {...ActiveEffectRotV} dependent  One or more dependent effects.
+* @returns {Promise<ActiveEffectRotV>}
+*/
+async function _addDependent(...dependent) {
+	const id = game.system.id ?? MODULE_ID;
+	const dependents = this.getFlag(id, "dependents") ?? [];
+	dependents.push(...dependent.map(d => ({ uuid: d.uuid })));
+	return this.setFlag(id, "dependents", dependents);
+}
+/**
+* Retrieve a list of dependent effects.
+* @returns {Document[]}
+*/
+function _getDependents() {
+	const id = game.system.id ?? MODULE_ID;
+	return (this.getFlag(id, "dependents") || []).reduce((arr, { uuid }) => {
+		const effect = MQfromUuidSync(uuid);
+		if (effect)
+			arr.push(effect);
+		return arr;
+	}, []);
+}
+async function _onDelete(wrapped, options, userId) {
+	wrapped(options, userId);
+	//@ts-expect-error
+	if (game.user === game.users?.activeGM)
+		this.getDependents().forEach(d => d.delete());
+}
+function createConcentrationEffectData(wrapped, item, data = {}) {
+	const effectData = wrapped(item, data);
+	if (!foundry.utils.getProperty(effectData, `flags.${game.system.id}.itemUuid`)) {
+		foundry.utils.setProperty(effectData, `flags.${game.system.id}.itemUuid`, item.uuid);
+	}
+	return effectData;
+}
+export async function challengeConcentration(wrapped, { dc = 10, ability = null } = {}) {
+	if (["chatOnly"].includes(configSettings.doConcentrationCheck))
+		return wrapped({ dc, ability });
+	const isConcentrating = this.concentration.effects.size > 0;
+	if (!isConcentrating)
+		return null;
+	if (["chat"].includes(configSettings.doConcentrationCheck)) {
+		const isConcentrating = this.concentration.effects.size > 0;
+		const dataset = {
+			action: "concentration",
+			dc,
+		};
+		//@ts-expect-error
+		if (ability && ability in game.system.config.abilities)
+			dataset.ability = ability;
+		const config = {
+			type: "concentration",
+			format: "short",
+			icon: true
+		};
+		//@ts-expect-error
+		const enrichers = game.system.enrichers;
+		//@ts-expect-error
+		return ChatMessage.implementation.create({
+			content: `<div class="rotv chat-card request-card" data-action="concentration" data-dc="${dc}" data-type="midi-concentration">
+	<div><span class="visible-dc">${enrichers.createRollLabel({ ...dataset, ...config })} ${i18n("ROTV.Roll")}</span></div>
+	<div><span class="hidden-dc">${enrichers.createRollLabel({ ...dataset, ...config, hideDC: true })} ${i18n("ROTV.Roll")}</span></div>
+	</div>`,
+			whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")),
+			//@ts-expect-errorq
+			speaker: ChatMessage.implementation.getSpeaker({ actor: this })
+		});
+	}
+	// item rolls are picked up when the damage is updated in rotv.damageActor
+	return;
 }
 export let visionPatching = () => {
 	//@ts-ignore game.version
-	const patchVision = isNewerVersion(game.version ?? game?.version, "0.7.0") && game.settings.get("midi-qol-rotv", "playerControlsInvisibleTokens");
+	const patchVision = foundry.utils.isNewerVersion(game.version ?? game?.version, "0.7.0") && game.settings.get(MODULE_ID, "playerControlsInvisibleTokens");
 	if (patchVision) {
-		ui.notifications?.warn("Player control vision is deprecated please use the module Your Tokens Visible");
-		console.warn("midi-qol-rotv | Player control vision is deprecated please use the module Your Tokens Visible");
+		ui.notifications?.warn("Player control vision is deprecated, use it at your own risk");
+		console.warn("midi-qol-rotv | Player control vision is deprecated, use it at your own risk");
 		log("Patching Token._isVisionSource");
-		libWrapper.register("midi-qol-rotv", "Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
+		libWrapper.register(MODULE_ID, "Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
 		log("Patching Token.isVisible");
-		libWrapper.register("midi-qol-rotv", "Token.prototype.isVisible", isVisible, "WRAPPER");
+		libWrapper.register(MODULE_ID, "Token.prototype.isVisible", isVisible, "WRAPPER");
 	}
 	log("Vision patching - ", patchVision ? "enabled" : "disabled");
 };
 export function configureDamageRollDialog() {
 	try {
+		libWrapper.unregister(MODULE_ID, "CONFIG.Dice.DamageRoll.configureDialog", false);
 		if (configSettings.promptDamageRoll)
-			libWrapper.register("midi-qol-rotv", "game.rotv.dice.DamageRoll.prototype.configureDialog", CustomizeDamageFormula.configureDialog, "MIXED");
-		else {
-			libWrapper.unregister("midi-qol-rotv", "game.rotv.dice.DamageRoll.prototype.configureDialog");
-		}
-	}
-	catch (err) { }
-}
-export let itemPatching = () => {
-	if (!game.settings.get("midi-qol-rotv", "itemUseHooks")) {
-		//@ts-ignore .version
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.displayCard", wrappedDisplayCard, "MIXED");
-	}
-	else {
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Item.documentClass.prototype.displayCard", wrappedDisplayCard, "MIXED");
-	}
-	if (game.system.id === "rotv" || game.system.id === "n5e")
-		libWrapper.register("midi-qol-rotv", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
-	configureDamageRollDialog();
-};
-export async function preDeleteTemplate(templateDocument, options, user) {
-	try {
-		const uuid = getProperty(templateDocument, "flags.midi-qol-rotv.originUuid");
-		const actor = MQfromUuid(uuid)?.actor;
-		if (!(actor instanceof CONFIG.Actor.documentClass))
-			return true;
-		const concentrationData = getProperty(actor, "flags.midi-qol-rotv.concentration-data");
-		if (!concentrationData)
-			return true;
-		const concentrationTemplates = concentrationData.templates.filter(templateUuid => templateUuid !== templateDocument.uuid);
-		// if (concentrationTemplates.length === concentrationData.templates.length) return true;
-		if (concentrationTemplates.length === 0
-			&& concentrationData.targets.length === 1
-			&& concentrationData.removeUuids.length === 0
-			&& ["effectsTemplates"].includes(configSettings.removeConcentrationEffects)) {
-			// non concentration effects left
-			await removeConcentration(actor, "no ignore");
-		}
-		else if (concentrationData.templates.length >= 1) {
-			// update the concentration templates
-			concentrationData.templates = concentrationTemplates;
-			await actor.setFlag("midi-qol-rotv", "concentration-data", concentrationData);
-		}
+			libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.configureDialog", CustomizeDamageFormula.configureDialog, "MIXED");
 	}
 	catch (err) {
+		const message = `midi-qol-rotv | error when registering configureDamageRollDialog`;
+		TroubleShooter.recordError(err, message);
+		error(message, err);
 	}
-	finally {
-		return true;
+}
+function _getUsageConfig(wrapped) {
+	//Radius tempalte spells with self/spec/any will auto place the template so don't prompt for it in config.
+	const config = wrapped();
+	const autoCreatetemplate = this.hasAreaTarget && hasAutoPlaceTemplate(this);
+	if (autoCreatetemplate)
+		config.createMeasuredTemplate = null;
+	return config;
+}
+export let itemPatching = () => {
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.displayCard", wrappedDisplayCard, "MIXED");
+	if (game.system.id === "rotv" || game.system.id === "n5e") {
+		//@ts-expect-error .version
+		if (foundry.utils.isNewerVersion(game.system.version, "2.3.99"))
+			libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype._getUsageConfig", _getUsageConfig, "WRAPPER");
+		libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
+	}
+	configureDamageRollDialog();
+};
+export async function checkDeleteTemplate(templateDocument, options, user) {
+	if (user !== game.user?.id)
+		return;
+	if (options.undo)
+		return;
+	let origin = MQfromUuidSync(templateDocument.getFlag("rotv", "origin"));
+	if (origin instanceof Item && origin.parent instanceof Actor) {
+		//@ts-expect-error
+		origin = origin.parent.effects?.find(ef => ef.getFlag("rotv", "dependents")?.some(dep => dep.uuid === templateDocument.uuid));
+	}
+	if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
+		//@ts-expect-error
+		if (origin?.getDependents()?.length === 0) {
+			await origin.delete();
+		}
 	}
 }
 ;
 export let actorAbilityRollPatching = () => {
-	if (!game.settings.get("midi-qol-rotv", "itemUseHooks")) {
-		log("Patching rollAbilitySave");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
-		log("Patching rollAbilityTest");
-		libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
-	}
-	// TODO come back and add these
-	log("Patching rollSkill");
-	libWrapper.register("midi-qol-rotv", "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "WRAPPER");
+	log("Patching roll abilities Save/Test/Skill/Tool");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilitySave", rollAbilitySave, "MIXED");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilityTest", rollAbilityTest, "MIXED");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+	libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "MIXED");
+	libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.rollToolCheck", rollToolCheck, "WRAPPER");
 	// 10.0.19 rollDeath save now implemented via the preRollDeathSave Hook
+	// v12 (and v11 for compat) deathSave is now a patch to allow for async evaluation of adv/dis flags
 };
+export async function rollToolCheck(wrapped, options = {}) {
+	const chatMessage = options.chatMessage;
+	options.chatMessage = false;
+	let result = await wrapped(options);
+	let rollMode = result.options.rollMode ?? game.settings.get("core", "rollMode");
+	await displayDSNForRoll(result, "toolCheck", rollMode);
+	result = await bonusCheck(this.actor, result, "check", this.system.ability ?? "");
+	if (chatMessage !== false && result) {
+		const title = `${this.name} - ${game.i18n.localize("ROTV.ToolCheck")}`;
+		const args = { "speaker": getSpeaker(this.actor), title, flavor: title };
+		foundry.utils.setProperty(args, `flags.${game.system.id}.roll`, { type: "tool", itemId: this.id, itemUuid: this.uuid });
+		args.template = "modules/midi-qol-rotv/templates/roll.html";
+		await result.toMessage(args, { rollMode });
+	}
+	return result;
+}
 export function patchLMRTFY() {
 	if (installedModules.get("lmrtfy")) {
 		log("Patching lmrtfy");
-		// libWrapper.register("midi-qol-rotv", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
-		libWrapper.register("midi-qol-rotv", "LMRTFY.onMessage", LMRTFYOnMessage, "OVERRIDE");
-		// the _tagMessage has been updated in LMRTFY libWrapper.register("midi-qol-rotv", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
-		// libWrapper.register("midi-qol-rotv", "ChatMessage.create", filterChatMessageCreate, "WRAPPER")
+		libWrapper.register(MODULE_ID, "LMRTFYRoller.prototype._makeRoll", LMRTFYMakeRoll, "OVERRIDE");
+		libWrapper.register(MODULE_ID, "LMRTFY.onMessage", LMRTFYOnMessage, "OVERRIDE");
 	}
 }
 function LMRTFYOnMessage(data) {
@@ -1171,6 +1607,53 @@ function LMRTFYOnMessage(data) {
 		return;
 	//@ts-ignore
 	new LMRTFYRoller(actors, data).render(true);
+}
+async function LMRTFYMakeRoll(event, rollMethod, failRoll, ...args) {
+	let options = this._getRollOptions(event, failRoll);
+	// save the current roll mode to reset it after this roll
+	const rollMode = game.settings.get("core", "rollMode");
+	game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
+	for (let actor of this.actors) {
+		Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
+		// system specific roll handling
+		switch (game.system.id) {
+			default: {
+				foundry.utils.setProperty(options, "flags.lmrtfy", { "message": this.data.message, "data": this.data.attach });
+				actor[rollMethod].call(actor, ...args, options);
+			}
+		}
+	}
+	game.settings.set("core", "rollMode", rollMode);
+	this._disableButtons(event);
+	this._checkClose();
+}
+// This is done as a wrapper so that there is no race condition when hp reaches 0 also trying to remove condition
+// This version will always fire first, remove concentration if needed and complete before the hp update is processed.
+async function _preCreateActiveEffect(wrapped, data, options, user) {
+	try {
+		if (!configSettings.concentrationIncapacitatedConditionCheck)
+			return;
+		const parent = this.parent;
+		const checkConcentration = configSettings.concentrationAutomation || !safeGetGameSetting("rotv", "disableConcentration");
+		if (!checkConcentration || options.noConcentrationCheck)
+			return;
+		if (!(parent instanceof CONFIG.Actor.documentClass))
+			return;
+		if (globalThis.MidiQOL.incapacitatedConditions.some(condition => this.statuses.has(condition))) {
+			if (debugEnabled > 0)
+				warn(`on createActiveEffect ${this.name} ${this.id} removing concentration for ${parent.name}`);
+			//@ts-expect-error
+			parent.endConcentration();
+		}
+	}
+	catch (err) {
+		const message = "midi-qol-rotv | error in preCreateActiveEffect";
+		console.error(message, err);
+		TroubleShooter.recordError(err, message);
+	}
+	finally {
+		return wrapped(data, options, user);
+	}
 }
 function filterChatMessageCreate(wrapped, data, context) {
 	if (!(data instanceof Array))
@@ -1222,24 +1705,28 @@ export async function createRollResultFromCustomRoll(customRoll) {
 	let diceRoll = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
 	let isCritical = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
 	//@ts-ignore
-	const result = await new Roll(`${saveTotal}`).evaluate({ async: true });
-	setProperty(result.terms[0].options, "advantage", advantage);
-	setProperty(result.terms[0].options, "disadvantage", disadvantage);
+	const result = await new Roll(`${saveTotal}`).evaluate();
+	foundry.utils.setProperty(result.terms[0].options, "advantage", advantage);
+	foundry.utils.setProperty(result.terms[0].options, "disadvantage", disadvantage);
 	return result;
 }
 export async function _preDeleteCombat(wrapped, ...args) {
 	try {
 		for (let combatant of this.combatants) {
 			if (combatant.actor) {
-				if (await hasUsedReaction(combatant.actor))
+				if (hasUsedReaction(combatant.actor))
 					await removeReactionUsed(combatant.actor, true);
-				if (await hasUsedBonusAction(combatant.actor))
+				if (hasUsedBonusAction(combatant.actor))
 					await removeBonusActionUsed(combatant.actor, true);
+				if (hasUsedAction(combatant.actor))
+					await removeActionUsed(combatant.actor);
 			}
 		}
 	}
 	catch (err) {
-		console.warn("midi-qol-rotv | error in preDeleteCombat ", err);
+		const message = `midi-qol-rotv | error in preDeleteCombat`;
+		console.warn(message, err);
+		TroubleShooter.recordError(err, message);
 	}
 	finally {
 		return wrapped(...args);
@@ -1248,12 +1735,54 @@ export async function _preDeleteCombat(wrapped, ...args) {
 class CustomizeDamageFormula {
 	static async configureDialog(wrapped, ...args) {
 		// If the option is not enabled, return the original function - as an alternative register\unregister would be possible
-		const [{ title, defaultRollMode, defaultCritical, template, allowCritical }, options] = args;
+		const [rolls, { title, defaultRollMode, defaultCritical, template, allowCritical }, options] = args;
 		// Render the Dialog inner HTML
+		const allRolls = rolls.map((roll, index) => ({
+			value: `${roll.formula}${index === 0 ? " + @bonus" : ""}`,
+			type: GameSystemConfig.damageTypes[roll.options.type]?.label ?? null,
+			active: true,
+			label: "Formula",
+			roll,
+			id: foundry.utils.randomID()
+		}));
+		const item = rolls[0]?.data.item;
+		//@ts-expect-error
+		const DamageRoll = CONFIG.Dice.DamageRoll;
+		if (item) {
+			if (item.damage.versatile) {
+				let actorBonus;
+				if (rolls[0].data?.bonuses) {
+					const actorBonusData = foundry.utils.getProperty(rolls[0], `data.bonuses.${item.actionType}`) || {};
+					if (actorBonusData.damage && (parseInt(actorBonusData.damage) !== 0)) {
+						actorBonus = actorBonusData.damage;
+					}
+				}
+				const versatileFormula = item.damage.versatile + (actorBonus ? ` + ${actorBonus}` : "");
+				allRolls.push({
+					value: versatileFormula,
+					type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
+					active: false,
+					label: "Versatile",
+					roll: new DamageRoll(versatileFormula, rolls[0].data, rolls[0].options),
+					id: foundry.utils.randomID()
+				});
+			}
+			if ((item.formula ?? "").length > 0) {
+				allRolls.push({
+					value: item.formula,
+					type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
+					versatileDamage: item.damage.versatile,
+					active: false,
+					label: "Other",
+					roll: new DamageRoll(item.formula, rolls[0].data, rolls[0].options),
+					id: foundry.utils.randomID()
+				});
+			}
+		}
 		const content = await renderTemplate(
 		//@ts-ignore
-		template ?? this.constructor.EVALUATION_TEMPLATE, {
-			formula: `${this.formula} + @bonus`,
+		"modules/midi-qol-rotv/templates/damage-roll-dialog.hbs", {
+			formulas: allRolls,
 			defaultRollMode,
 			rollModes: CONFIG.Dice.rollModes,
 		});
@@ -1261,6 +1790,7 @@ class CustomizeDamageFormula {
 		return new Promise((resolve) => {
 			new Dialog({
 				title,
+				rolls: allRolls,
 				content,
 				buttons: {
 					critical: {
@@ -1268,124 +1798,118 @@ class CustomizeDamageFormula {
 						condition: allowCritical,
 						label: game.i18n.localize("ROTV.CriticalHit"),
 						//@ts-ignore
-						callback: (html) => resolve(this._onDialogSubmit(html, true)),
+						callback: html => {
+							let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
+							returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, true, i === 0));
+							rolls.length = 0;
+							rolls.push(...returnRolls);
+							resolve(returnRolls);
+						}
 					},
 					normal: {
 						label: game.i18n.localize(allowCritical ? "ROTV.Normal" : "ROTV.Roll"),
 						//@ts-ignore
-						callback: (html) => resolve(this._onDialogSubmit(html, false)),
+						callback: html => {
+							let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
+							returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, false, i === 0));
+							rolls.length = 0;
+							rolls.push(...returnRolls);
+							resolve(returnRolls);
+						},
 					},
 				},
 				default: defaultCritical ? "critical" : "normal",
 				// Inject the formula customizer - this is the only line that differs from the original
-				render: (html) => { try {
-					CustomizeDamageFormula.injectFormulaCustomizer(this, html);
-				}
-				catch (e) {
-					error(e);
-				} },
+				render: (html) => {
+					try {
+						CustomizeDamageFormula.activateListeners(html, allRolls);
+					}
+					catch (err) {
+						const message = `injectFormulaCustomizer`;
+						error(message, err);
+						TroubleShooter.recordError(err, message);
+					}
+				},
 				close: () => resolve(null),
 			}, options).render(true);
 		});
 	}
-	static injectFormulaCustomizer(damageRoll, html) {
-		const item = damageRoll.data.item; // TODO check this v10
-		const damageOptions = {
-			default: damageRoll.formula,
-			versatileDamage: item.damage.versatile,
-			otherDamage: item.formula,
-			parts: item.damage.parts,
-		};
-		const customizerSelect = CustomizeDamageFormula.buildSelect(damageOptions, damageRoll);
-		const fg = $(html).find(`input[name="formula"]`).closest(".form-group");
-		fg.after(customizerSelect);
-		CustomizeDamageFormula.activateListeners(html, damageRoll);
-	}
-	static updateFormula(damageRoll, data) {
-		//@ts-ignore
-		const newDiceRoll = new CONFIG.Dice.DamageRoll(data.formula, damageRoll.data, damageRoll.options);
-		CustomizeDamageFormula.updateFlavor(damageRoll, data);
-		damageRoll.terms = newDiceRoll.terms;
-	}
-	static updateFlavor(damageRoll, data) {
-		const itemName = damageRoll.options.flavor.split(" - ")[0];
-		const damageType = CustomizeDamageFormula.keyToText(data.damageType);
-		const special = CustomizeDamageFormula.keyToText(data.key) === damageType ? "" : CustomizeDamageFormula.keyToText(data.key);
-		const newFlavor = `${itemName} - ${special} ${CustomizeDamageFormula.keyToText("damageRoll")} ${damageType ? `(${damageType.replace(" - ", "")})` : ""}`;
-		Hooks.once("preCreateChatMessage", (message) => {
-			message.updateSource({ flavor: newFlavor }); // TODO check this v10
+	static activateListeners(html, allRolls) {
+		html.find('input[name="formula.active"]').on("click", (e) => {
+			const id = e.currentTarget.dataset.id;
+			const theRoll = allRolls.find(r => r.id === id);
+			theRoll.active = e.currentTarget.checked;
 		});
 	}
-	static buildSelect(damageOptions, damageRoll) {
-		const select = $(`<select id="customize-damage-formula"></select>`);
-		for (let [k, v] of Object.entries(damageOptions)) {
-			if (k === "parts") {
-				//@ts-ignore
-				for (let part of v) {
-					//@ts-ignore
-					const index = v.indexOf(part);
-					const adjustedFormula = CustomizeDamageFormula.adjustFormula(part, damageRoll);
-					select.append(CustomizeDamageFormula.createOption(part[1], part, index));
+}
+export function processTraits(actor) {
+	try {
+		if (!actor.system.traits)
+			return;
+		for (let traitId of ["di", "dr", "dv", "sdi", "sdr", "sdv"]) {
+			let trait = actor.system.traits[traitId];
+			if (!trait)
+				continue;
+			if (!trait.value)
+				trait.value = new Set();
+			for (let traitString of trait.value) {
+				switch (traitString) {
+					case "silver":
+						trait.bypasses.add("sil");
+						addPhysicalDamages(trait.value);
+						break;
+					case "adamant":
+						trait.bypasses.add("ada");
+						addPhysicalDamages(trait.value);
+						break;
+					case "physical":
+						addPhysicalDamages(trait.value);
+						break;
+					case "nonmagic":
+						addPhysicalDamages(trait.value);
+						trait.bypasses.add("mgc");
+						break;
+					case "spell":
+						// trait.custom = addCustomTrait(trait.custom, i18n("midi-qol-rotv.spell-damage"));
+						break;
+					case "power":
+						// trait.custom = addCustomTrait(trait.custom, i18n("midi-qol-rotv.power-damage"));
+						break;
+					case "magic":
+						// trait.custom = addCustomTrait(trait.custom, i18n("midi-qol-rotv.Magical"));
+						break;
+					case "healing":
+						// trait.custom = addCustomTrait(trait.custom, systemConfig.healingTypes.healing);
+						break;
+					case "temphp":
+						// trait.custom = addCustomTrait(trait.custom, systemConfig.healingTypes.temphp);
+						break;
+					default:
+						trait.value.add(traitString);
 				}
 			}
-			else {
-				//@ts-ignore
-				if (v)
-					select.append(CustomizeDamageFormula.createOption(k, v));
-			}
-		}
-		const fg = $(`<div class="form-group"><label>${CustomizeDamageFormula.keyToText("customizeFormula")}</label></div>`);
-		fg.append(select);
-		return fg;
-	}
-	static createOption(key, data, index) {
-		const title = CustomizeDamageFormula.keyToText(key);
-		if (typeof data === "string") {
-			return $(`<option data-damagetype="" data-key="${key}" data-index="" value="${data}">${title + data}</option>`);
-		}
-		else {
-			return $(`<option data-damagetype="${data[1]}" data-key="${key}" data-index="${index}" value="${data[0]}">${title + data[0]}</option>`);
 		}
 	}
-	static adjustFormula(part, damageRoll) {
-		if (damageRoll.data.item.level) { // check this v10
-			//adjust for level scaling
-		}
-		return part;
+	catch (err) {
+		const message = `midi-qol-rotv | processTraits | error for ${actor?.name}`;
+		console.warn(message, this, err);
+		TroubleShooter.recordError(err, message);
 	}
-	static keyToText(key) {
-		//localize stuff
-		switch (key) {
-			case "damageRoll":
-				return "Damage Roll";
-			case "customizeFormula":
-				return "Customize Formula";
-			case "versatileDamage":
-				return "Versatile - ";
-			case "otherDamage":
-				return "Other - ";
-			case "default":
-				return "Default - ";
-		}
-		return key.charAt(0).toUpperCase() + key.slice(1) + " - ";
-	}
-	static activateListeners(html, damageRoll) {
-		$(html).find(`select[id="customize-damage-formula"]`).on("change", (e) => {
-			const selected = $(e.currentTarget).find(":selected");
-			$(html).find(`input[name="formula"]`).val(selected.val() + " + @bonus");
-			CustomizeDamageFormula.updateFormula(damageRoll, { formula: selected.val() + " + @bonus", key: selected.data("key"), damageType: selected.data("damagetype"), partsIndex: selected.data("index") });
-		});
+	finally {
 	}
 }
 export function migrateTraits(actor) {
 	try {
+		if (!actor.system.traits)
+			return;
 		const baseData = actor.toObject(true);
 		for (let traitId of ["di", "dr", "dv", "sdi", "sdr", "sdv"]) {
 			let trait = actor.system.traits[traitId];
 			let baseTrait = baseData.system.traits[traitId];
 			if (!trait)
 				continue;
-			trait.value = [];
+			if (!trait.value)
+				trait.value = new Set();
 			if (trait.bypasses instanceof Set) {
 				for (let traitString of baseTrait.value) {
 					switch (traitString) {
@@ -1428,12 +1952,12 @@ export function migrateTraits(actor) {
 							log(`${actor.name} mapping "magic" to ${trait.custom}`);
 							break;
 						case "healing":
-							trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.healing);
+							trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.healing);
 							trait.value.delete("healing");
 							log(`${actor.name} mapping "healing" to ${trait.custom}`);
 							break;
 						case "temphp":
-							trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.temphp);
+							trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.temphp);
 							trait.value.delete("temphp");
 							log(`${actor.name} mapping "temphp" to ${trait.custom}`);
 							break;
@@ -1487,12 +2011,12 @@ export function migrateTraits(actor) {
 							log(`${actor.name} mapping "magic" to ${trait.custom}`);
 							break;
 						case "healing":
-							trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.healing);
+							trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.healing);
 							trait.value = removeTraitValue(trait.value, "healing");
 							log(`${actor.name} mapping "healing" to ${trait.custom}`);
 							break;
 						case "temphp":
-							trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.temphp);
+							trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.temphp);
 							trait.value = removeTraitValue(trait.value, "temphp");
 							log(`${actor.name} mapping "temphp" to ${trait.custom}`);
 							break;
@@ -1504,7 +2028,9 @@ export function migrateTraits(actor) {
 		}
 	}
 	catch (err) {
-		console.warn("midi-qol-rotv | migrate traits error ", this, err);
+		const message = `midi-qol-rotv | migrateTraits | error for ${actor?.name}`;
+		console.warn(message, this, err);
+		TroubleShooter.recordError(err, message);
 	}
 	finally {
 	}
@@ -1520,7 +2046,14 @@ function removeTraitValue(traitValue, toRemove) {
 	return traitValue;
 }
 function addPhysicalDamages(traitValue) {
-	const phsyicalDamageTypes = Object.keys(getSystemCONFIG().physicalDamageTypes);
+	let phsyicalDamageTypes;
+	//@ts-expect-error
+	if (foundry.utils.isNewerVersion(game.system.version, "3.1.99")) {
+		phsyicalDamageTypes = Object.keys(GameSystemConfig.damageTypes).filter(dt => GameSystemConfig.damageTypes[dt].isPhysical);
+	}
+	else {
+		phsyicalDamageTypes = Object.keys(GameSystemConfig.physicalDamageTypes);
+	}
 	for (let dt of phsyicalDamageTypes) {
 		if (traitValue instanceof Set)
 			traitValue.add(dt);
@@ -1529,7 +2062,6 @@ function addPhysicalDamages(traitValue) {
 	}
 }
 function addCustomTrait(customTraits, customTrait) {
-	console.log("Adding custom trait ", customTrait, customTraits);
 	if (customTraits.length === 0) {
 		return customTrait;
 	}
@@ -1543,12 +2075,53 @@ function preDamageTraitSelectorGetData(wrapped) {
 	try {
 		// migrate di/dr/dv and strip out active effect data.
 		if (this.object instanceof Actor)
-			migrateTraits(this.object);
+			processTraits(this.object);
 	}
 	catch (err) {
-		console.error("migrate traits error", err);
+		const message = `preDamageTraitSelectorGetData | migrate traits error`;
+		error(message, err);
+		TroubleShooter.recordError(err, message);
 	}
 	finally {
 		return wrapped();
 	}
 }
+function actorGetRollData(wrapped, ...args) {
+	const data = wrapped(...args);
+	data.actorType = this.type;
+	data.name = this.name;
+	data.midiFlags = (this.flags && this.flags[MODULE_ID]) ?? {};
+	data.flags.midiqol = foundry.utils.getProperty(data, "flags.midi-qol-rotv");
+	data.items = this.items;
+	if (game.system.id === "rotv") {
+		data.cfg = {};
+		data.cfg.armorClasses = GameSystemConfig.armorClasses;
+		data.cfg.actorSizes = GameSystemConfig.actorSizes;
+		data.cfg.skills = GameSystemConfig.skills;
+	}
+	return data;
+}
+function itemGetRollData(wrapped, ...args) {
+	const data = wrapped(...args);
+	if (!data)
+		return data;
+	data.item.flags = this.flags;
+	data.item.midiFlags = foundry.utils.getProperty(this, "flags.midi-qol-rotv");
+	data.item.name = this.name;
+	data.item.itemType = this.type;
+	return data;
+}
+function _filterItems(wrapped, items, filters) {
+	if (!filters.has("reaction"))
+		return wrapped(items, filters);
+	const revisedFilters = new Set(filters);
+	revisedFilters.delete("reaction");
+	let filteredItems = wrapped(items, revisedFilters);
+	filteredItems = filteredItems.filter(item => {
+		if (item.system.activation?.type?.includes("reaction"))
+			return true;
+		return false;
+	});
+	return filteredItems;
+}
+;

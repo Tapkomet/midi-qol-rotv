@@ -2,25 +2,57 @@
   {{#unless oneCard}}
   <div>{{attackType}}</div>
   {{/unless}}
-  <div class="midi-qol-rotv-nobox">
-    {{#each hits as |hit iid|}}
-    <div class="midi-qol-rotv-flex-container">
-      {{#if ../showHits}}
-      <div style="{{hit.hitStyle}}">
-        <strong>{{hit.hitString}}</strong>
-        {{#if ../displayHitResultNumeric}}
-        ({{hit.hitResultNumeric}})
+  <div class="rotv2 evaluation">
+    {{#if collapsibleTargets}}
+    <div class="card-tray targets-tray collapsible">
+      <label class="roboto-upper">
+        <i class="fas fa-bullseye" inert></i>
+        <span>{{localize "ROTV.TargetPl"}}</span>
+        <i class="fas fa-caret-down" inert></i>
+      </label>
+      <div class="collapsible-content">
         {{/if}}
+        <ul class="rotv2 unlist evaluation wrapper">
+          {{#each hits as |hit iid|}}
+          <li data-uuid="{{actorUuid}}" data-id="{{hit.target.id}}" class="target {{hit.hitClass}} midi-qol-rotv midi-qol-rotv-hit-class midi-qol-rotv-target-select">
+            <i class="midi-qol-rotv-hit-symbol fas {{hit.hitSymbol}}"></i>
+            <img src="{{hit.img}}"
+              style="background-color: var(--rotv-background-10); width: 22px !important; height: 22px !important;" />
+            <div class="name-stacked">
+              <span class="midi-qol-rotv-target-name title midi-qol-rotv-gmTokenName" id="{{hit.target.id}}">
+                {{{hit.gmName}}}
+              </span>
+              <span class="midi-qol-rotv-target-name title midi-qol-rotv-playerTokenName" id="{{hit.target.id}}">
+                {{hit.playerName}}
+              </span>
+            </div>
+            {{#if showAC}}
+            <div class="midi-qol-rotv-ac {{hit.acClass}}">
+              <span>
+                <i class="fas fa-shield-halved"></i>
+                {{#if hit.bonusAC}}
+                <span style="font-weight: bold;">{{hit.ac}}+{{hit.bonusAC}}</span>
+                {{else}}
+                <span style="font-weight: bold;">{{hit.ac}}</span>
+                {{/if}}
+              </span>
+            </div>
+            {{else}}
+            {{#if hit.bonusAC}}
+            <div class="midi-qol-rotv-ac {{hit.acClass}}">
+              <span>
+                <i class="fas fa-shield-halved"></i>
+                <span style="font-weight: bold;">+{{hit.bonusAC}}</span>
+              </span>
+            </div>
+            {{/if}}
+            {{/if}}
+          </li>
+          {{/each}}
+        </ul>
+        {{#if collapsibleTargets}}
       </div>
-      {{/if}}
-      <div class="midi-qol-rotv-target-npc-GM midi-qol-rotv-target-name" id={{hit.target.id}}> {{hit.gmName}}</div>
-      <div class="midi-qol-rotv-target-npc-Player midi-qol-rotv-target-name" id={{hit.target.id}}> {{hit.playerName}}</div>
-      <div><img src="{{hit.img}}" width="30" height="30" style="border:0px" /></div>
-      {{#if hit.bonusAC}}
-      <div>+{{hit.bonusAC}} {{localize "midi-qol-rotv.BonusACCover"}}</div>
-      {{/if}}
-      <div>(Range mod: {{hit.distanceModifier}}, final result: {{hit.hitResultNumeric}})</div>
     </div>
-    {{/each}}
+    {{/if}}
   </div>
 </div>

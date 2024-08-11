@@ -12,7 +12,7 @@ export class SoundConfigPanel extends FormApplication {
 		return i18n("midi-qol-rotv.ConfigTitle");
 	}
 	static get defaultOptions() {
-		return mergeObject(super.defaultOptions, {
+		return foundry.utils.mergeObject(super.defaultOptions, {
 			id: "midi-qol-rotv-sound-config",
 			tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "sounds" }],
 			classes: ["rotv"],
@@ -32,12 +32,14 @@ export class SoundConfigPanel extends FormApplication {
 		let data = super.getData(options);
 		//@ts-ignore
 		let systemConfig = (game.system.id === "rotv") ? CONFIG.ROTV : CONFIG.SW5E;
-		data.weaponSubtypes = mergeObject({ any: "Any", none: "None" }, systemConfig.weaponTypes);
-		data.weaponSubtypes = mergeObject(data.weaponSubtypes, MidiSounds.weaponBaseTypes);
-		data.equipmentSubtypes = mergeObject({ any: "Any" }, systemConfig.equipmentTypes);
-		data.consumableSubTypes = mergeObject({ any: "Any" }, systemConfig.consumableTypes);
-		data.spellSubtypes = mergeObject({ any: "Any" }, systemConfig.spellSchools);
-		data.toolSubtypes = mergeObject({ any: "Any" }, systemConfig.toolTypes);
+		data.weaponSubtypes = foundry.utils.mergeObject({ any: "Any", none: "None" }, systemConfig.weaponTypes);
+		data.weaponSubtypes = foundry.utils.mergeObject(data.weaponSubtypes, MidiSounds.weaponBaseTypes);
+		data.equipmentSubtypes = foundry.utils.mergeObject({ any: "Any" }, systemConfig.equipmentTypes);
+		const consumeableSubtypesData = Object.keys(systemConfig.consumableTypes).reduce((obj, key) => { obj[key] = systemConfig.consumableTypes[key].label; return obj; }, {});
+		data.consumableSubTypes = foundry.utils.mergeObject({ any: "Any" }, consumeableSubtypesData);
+		const spellSchoolData = Object.keys(systemConfig.spellSchools).reduce((obj, key) => { obj[key] = systemConfig.spellSchools[key].label; return obj; }, {});
+		data.spellSubtypes = foundry.utils.mergeObject({ any: "Any" }, spellSchoolData);
+		data.toolSubtypes = foundry.utils.mergeObject({ any: "Any" }, systemConfig.toolTypes);
 		data.defaultSubtypes = { any: "Any" };
 		data.characterTypes = { any: "Any", npc: "NPC", character: "Character", "none": "None" };
 		data.subTypes = {
@@ -50,13 +52,13 @@ export class SoundConfigPanel extends FormApplication {
 			"all": data.defaultSubtypes,
 			"none": { none: "None" }
 		};
-		const itemTypes = duplicate(CONFIG.Item.typeLabels);
+		const itemTypes = foundry.utils.duplicate(CONFIG.Item.typeLabels);
 		delete itemTypes.backpack;
 		delete itemTypes.class;
 		itemTypes.all = "All";
 		itemTypes.none = "None";
 		data.itemTypes = Object.keys(itemTypes).reduce((list, key) => { list[key] = i18n(itemTypes[key]); return list; }, {});
-		data.midiSoundSettings = duplicate(midiSoundSettings);
+		data.midiSoundSettings = foundry.utils.duplicate(midiSoundSettings);
 		data.SoundSettingsBlurb = geti18nOptions("SoundSettingsBlurb");
 		data.quickSettingsOptions = { createPlaylist: "Create Sample Playlist", basic: "Basic Settings", detailed: "Detailed Settings", full: "Full Settings" };
 		data.playlists = game.playlists?.reduce((acc, pl) => {
@@ -97,7 +99,7 @@ export class SoundConfigPanel extends FormApplication {
 	async _updateObject(event, formData) {
 		if (!game.user?.can("SETTINGS_MODIFY"))
 			return;
-		formData = expandObject(formData);
+		formData = foundry.utils.expandObject(formData);
 		const settings = {};
 		if (formData.chartype) {
 			if (typeof formData.chartype === "string") {

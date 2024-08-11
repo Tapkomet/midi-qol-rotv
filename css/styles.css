@@ -88,6 +88,12 @@
   transition: opacity 0.2s ease-in-out 0s;
 }
 
+.midi-qol-rotv-enable-damage-button {
+  color: green
+}
+.midi-qol-rotv-disable-damage-button {
+  color: red
+}
 .xdice-total-full-damage-button,
 .xdice-total-half-damage-button,
 .xdice-total-double-damage-button,
@@ -117,8 +123,9 @@
 .midi-qol-rotv-flex-container > div {
   margin: 2px;
 }
+
 .midi-qol-rotv-target-name:hover {
-  text-shadow: 0 0 4px red;
+  /*text-shadow: 0 0 4px red; */
 }
 .midi-qol-rotv-gmonly {
   display: none;
@@ -137,6 +144,10 @@
   color: #606060;
 }
 
+.midi-qol-rotv-very-faint {
+  color: #A0A0A0;
+}
+
 #midi-qol-rotv-item-selector .item-list {
   list-style: none;
   margin: 0;
@@ -153,8 +164,7 @@
 .midi-qol-rotv-tooltip .midi-qol-rotv-tooltiptext {
   visibility: hidden;
   width: max-content;
-  background-color: black;
-  color: #fff;
+  background-color: var(--rotv-color-card);
   text-align: center;
   border-radius: 6px;
   padding: 3px ;
@@ -196,10 +206,6 @@
 /* ----------------------------------------- */
 /* On Use Macros
 /* ----------------------------------------- */
-.onusemacro-group li [name*="betterRolls5e"] {
-  display: none;
-}
-
 .column-dialog .column-dialog-buttons {
   display: flex;
   flex-direction: column;
@@ -235,3 +241,494 @@
   background: rgba(0, 0, 0, 0.05);
   border: 2px groove var(--color-border-light-secondary);
 }
+
+/* ----------------------------------------- */
+/* midi-trouble-shooter
+/* ----------------------------------------- */
+.trouble-shooter-action-label:hover {
+  text-shadow: 0 0 4px red;
+}
+.midi-trouble-shooter .contents .scrollable {
+  flex: 1;
+  overflow: hidden auto;
+}
+/*
+.midi-trouble-shooter .window-content > div {
+  height: 90%;
+  flex-wrap: nowrap;
+}
+
+
+.midi-trouble-shooter .contents footer {
+  flex: 0;
+}
+*/
+
+.midi-qol-rotv-blind-select .selected{
+  background-color: #861b1b;
+  color: #fff;
+}
+
+.midi-qol-rotv .grid {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 10px;
+    width: 300; /* You can adjust the width as needed */
+}
+
+.midi-qol-rotv .grid-item {
+    width: 50px;
+    height: 50px;
+    margin: 10px;
+    background-color: grey;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.midi-qol-rotv .grid-item.selected {
+    background-color: green;
+}
+
+.midi-scrollable-list {
+  list-style: none;
+  margin: 0.5em 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border-dark-5);
+  border-radius: 2px;
+  max-height: 600px;
+  overflow: hidden auto;
+  scrollbar-width: thin;
+}
+
+.dice-result .dice-tooltip .dice .total {
+    flex: 50%;
+    max-width: 62.66px;
+}
+
+.dice-result .dice-tooltip .dice .dice-rolls {
+    flex: 50%;
+}
+
+.dice-result .dice-tooltip .dice .total .label {
+    white-space: normal;
+}
+
+.dice-result .midi-dice-tooltip {
+  flex: auto;
+  order: unset;
+  display: block;
+  overflow: hidden;
+  transition: all 250ms ease;
+}
+.dice-result .midi-dice-tooltip .tooltip-part {
+  border-bottom: 1px solid var(--color-border-light-1);
+  padding: 0.125rem 0;
+}
+.dice-result .midi-dice-tooltip .tooltip-part:last-child {
+  border: none;
+  padding-bottom: 0;
+}
+.dice-result .midi-dice-tooltip .tooltip-part.constant {
+  padding-right: 6px;
+  min-height: 40px;
+  display: grid;
+}
+.dice-result .midi-dice-tooltip .dice {
+  display: flex;
+  align-items: center;
+}
+.dice-result .midi-dice-tooltip .dice .dice-rolls {
+  flex: 1;
+  margin: 5px 0 5px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+}
+.dice-result .midi-dice-tooltip .dice .dice-rolls .roll {
+  position: unset;
+  float: unset;
+  margin: 0;
+}
+.dice-result .midi-dice-tooltip .dice .dice-rolls .constant {
+  font-family: var(--font-primary);
+  font-weight: bold;
+  font-size: var(--font-size-18);
+  margin-left: 0.25rem;
+}
+.dice-result .midi-dice-tooltip .dice .dice-rolls .constant .sign {
+  font-weight: normal;
+  color: var(--color-text-light-6);
+  margin-right: 2px;
+}
+.dice-result .midi-dice-tooltip .dice .total {
+  flex-basis: 25%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.dice-result .midi-dice-tooltip .dice .total > img {
+  top: 6px;
+  position: absolute;
+  width: 32px;
+  border: none;
+  opacity: 0.1;
+}
+.dice-result .midi-dice-tooltip .dice .total .label {
+  font-family: var(--rotv-font-roboto-condensed);
+  font-size: var(--font-size-10);
+  color: var(--color-text-dark-5);
+  text-transform: uppercase;
+  text-align: center;
+}
+.dice-result .midi-dice-tooltip .dice .total .value {
+  font-family: var(--font-primary);
+  font-weight: bold;
+  font-size: var(--font-size-20);
+}
+.dice-result .midi-dice-tooltip .dice .total .sign {
+  color: var(--color-text-light-6);
+  font-weight: normal;
+  margin-right: 2px;
+}
+.dice-result .dice-total {
+  font-weight: bold;
+  font-size: var(--font-size-20);
+  padding: 0.125rem;
+  margin-top: 0.25rem;
+  font-family: var(--font-primary);
+  position: relative;
+}
+.midi-bonus-damage-flavor {
+  text-align: center;
+}
+.rotv2 .midi-buttons button {
+  background: var(--rotv-color-card);
+  font-family: var(--rotv-font-roboto);
+  font-weight: bold;
+  font-size: var(--font-size-11);
+  text-transform: uppercase;
+  padding: 0.05rem;
+  border: 1px solid var(--color-border-light-2);
+  box-shadow: 0 0 8px var(--rotv-shadow-15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+}
+
+.rotv2.chat-card.midi-chat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  /* Effects Tray */
+}
+.rotv.chat-card.midi-chat-card .card-buttons {
+  margin: 2px 0;
+  height: 18px;
+  line-height: 14px;
+}
+
+.rotv.chat-card.midi-chat-card.card-buttons button {
+  color: red;
+  font-size: var(--font-size-12);
+  height: 18px;
+  line-height: 12px;
+  margin: 2px 0;
+}
+.rotv.chat-card.midi-chat-card .card-buttons span {
+  display: block;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid var(--rotv-border-light);
+}
+
+:is(.chat-popout, #chat-log) .message .rotv2.evaluation .midi-qol-rotv.target > img {
+  width: 22px !important;
+  height: 22px !important;
+  object-fit: cover;
+  object-position: top;
+  margin: 0px 0 !important;
+  border-radius: 100%;
+  border: 1px solid var(--rotv-color-gold) !important;
+  box-shadow: 0 0 2px var(--rotv-shadow-45) !important;
+  background: var(--rotv-color-light-gray);
+}
+
+/* CHAT - ROTV 3 AND MIDI */
+
+:root {
+
+  --rotv-color-failure-background: rgb(245,221,221);
+  --rotv-color-success-background: rgb(204,215,197);
+    
+  }
+  
+  /* Chat message borders */
+  
+  :is(.chat-popout, #chat-log) .message {
+    border-width: 0;	
+    border-left: 0.2rem solid;
+    border-color: var(--user-color);
+  }
+  
+  /* Fix chat message corners */
+  
+  :is(.chat-popout, #chat-log) .message.whisper::before {
+      border-radius: 6px !important;
+  }
+  
+  /* Condensed Item description */
+  
+  .rotv2.chat-card .description {
+      padding: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .rotv2.chat-card .description:not(:has(p),.collapsed) .details {
+    margin-top: 0.4rem; //fix for badly imported details
+  }
+  
+  /* Chat card spacing */
+  
+  .rotv2.chat-card.midi-chat-card {
+      gap: 0;
+  }
+  
+  /* Condensed hits, misses and saves evaluation */
+  
+  :is(.chat-popout, #chat-log) .message .rotv2.evaluation {
+      gap: 0.15rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  :is(.chat-popout, #chat-log) .message .rotv2.evaluation .target {
+    padding: 0.2rem 0.3rem;
+  }
+  
+  :is(.chat-popout, #chat-log) .message .rotv2.evaluation .target .name-stacked {
+    min-height: auto;
+  }
+  
+  :is(.chat-popout, #chat-log) .message .rotv2.evaluation .target .name-stacked .title {
+    font-size: var(--font-size-14);
+    margin-bottom: 0.1rem;
+  }
+  
+  :is(.chat-popout, #chat-log) .message .rotv2.evaluation .target.failure {
+      border-color: rgba(110,0,0,0.4);
+    background-color: var(--rotv-color-failure-background);
+  }
+  
+  :is(.chat-popout, #chat-log) .message .rotv2.evaluation .target.success {
+      border-color: rgba(0,108,0,0.4);
+    background-color: var(--rotv-color-success-background);
+  }
+  
+  .midi-qol-rotv-tooltiptext.midi-qol-rotv-save-tooltip {
+    width: 65%;
+  }
+  
+  .midi-qol-rotv-saves-display {
+    padding-top: 0.2rem;
+    font-size: 12px;
+  }
+  
+  /* Condensed footer pills */
+  .card-footer.pills.unlist li.pill.pill-sm {
+      font-size: 9px;
+    padding: 0.2rem 0.3rem;
+  }
+  .card-footer.pills.unlist {
+      gap: 0.2rem;
+    margin-top: 0.1rem;
+  }
+  
+  /* Midi Attack and Damage buttons */
+  
+  .rotv2.chat-card .card-buttons.midi-buttons:has(button) {
+      gap: 0.2rem;
+    padding-bottom: 0.4rem;
+  }
+  
+  .midi-qol-rotv-attack-buttons button,
+  .midi-qol-rotv-damage-buttons button,
+  .rotv2 .midi-buttons button {
+      height: 1.75rem;
+    margin: 0;
+  }
+  
+  /* Midi Attack and Damage results */
+  .midi-qol-rotv-attack-roll, .midi-qol-rotv-damage-roll {
+      white-space: nowrap;
+  }
+  
+  .midi-results .flexrow {
+      gap: 0.15rem; 
+  }
+  
+  
+  .dice-result .dice-tooltip .tooltip-part {
+      padding: 0;
+  }
+  
+  .dice-result .dice-tooltip .tooltip-part .dice {
+    margin: 0.2rem 0;
+  }
+  
+  .dice-result .dice-total {
+    margin-top: 0;
+  }
+  
+  .dice-result .dice-tooltip-collapser {
+    margin-top: 0.1rem;
+  }
+  
+  .midi-qol-rotv-attack-roll > div:nth-child(1), .midi-qol-rotv-damage-roll > div:nth-child(1), .midi-qol-rotv-other-damage-roll > div:nth-child(1) {
+    text-transform: uppercase;
+    font-size: 10px;
+    font-weight: bold;
+  }
+  
+  .dice-roll .dice-result {
+      margin-bottom: 0.2rem;
+  }
+  
+  /* Midi Damage application card (tested with RotV damage application OFF)  */
+  
+  :is(.chat-popout, #chat-log) .message:has(.xmidi-qol-rotv-flex-container) {
+      padding: 0 ;
+    border: none;
+    border-left: 0.2rem solid var(--user-color);
+  }
+  
+  /* Hides the header  */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) .message-header {
+      display: none; 
+  }
+  
+  /* Table Adjustments */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) table {
+      margin: 0;
+    border: none;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) th {
+    line-height: normal;
+    padding: 7px 3px 5px 3px;
+    text-align: left !important;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) thead > tr > th:nth-child(1)::before {
+      font-family: "Font Awesome 6 Pro";
+    content: "\f7a9";
+    margin-right: 3px;
+    color: var(--color-text-light-7);
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) td {
+    font-size: 13px;
+    line-height: normal;
+    padding: 0.15rem;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) th:last-child,
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) td:last-child {
+    padding-right: 0.5rem;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) th:first-child,
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) td:first-child {
+    padding-left: 8px;
+    width: 100%;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) thead {
+    background: rgba(0, 0, 0, 0.05);
+    font-size: 10px;
+    color: var(--color-text-dark-secondary);
+    text-shadow: none;
+    text-transform: uppercase;
+    border: none;
+    text-wrap: nowrap;
+    
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) tfoot td {
+    padding-top: 5px;
+    padding-bottom: 7px;
+  }
+  
+  :is(.chat-popout, #chat-log) .message.whisper::before {
+      border-radius: 0px;
+  }
+  
+  .midi-qol-rotv-tooltiptext {
+      width: max-content;
+    font-size: 14px;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) table > tbody > tr > td:nth-child(1) > div:nth-child(1) > div:nth-child(1) {
+    min-width: 32px;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container):has(button) table > tbody > tr > td:nth-child(1) > div:nth-child(2) > span > div {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    max-width: 95px;
+  }
+  
+  /* Select and buttons */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) select,
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) button {
+    border-radius: 3px;
+    border: 1px solid var(--color-border-light-2);
+    background: rgba(255, 255, 255, 0.4);
+    width: auto !important;
+    height: 26px !important;
+    padding: 0 4px 0 2px;
+    font-size: 12px;
+  }
+  
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) button {
+    padding: 0 5px 0 9px;
+  }
+  
+  /* row colors */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) table tbody tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.1);
+  }
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) table tbody tr:nth-child(odd) {
+      background-color: rgba(255, 255, 255, 0.1);
+  }
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) table tbody tr:hover {
+      background-color: rgba(150, 150, 200, 0.2);
+  }
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) table tbody tr {
+      border-bottom: 1px solid rgba(150, 150, 200, 0.2);
+  }
+  
+  /* Attempt to fix alignment in the damage display. Might break with RotV damage application as Midi outputs text differently with it on */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) td:first-child {
+      display: flex;
+      align-items: center;
+  }
+  /* Attempt to fix the image too */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) .midi-qol-rotv-target-name {
+      width: 30px;
+      height: 30px;
+      margin-right: 0.25rem;
+      vertical-align: middle;
+  }
+  
+  /* Hacky way to improve "All" positioning */
+  .chat-message.message.flexcol:has(.xmidi-qol-rotv-flex-container) tfoot td:first-child {
+      position: relative;
+    top: 0.25rem;
+    left: 0.25rem;
+  }

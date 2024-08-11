@@ -1,4 +1,4 @@
-import { debug, i18n } from "../midi-qol-rotv.js";
+import { debug, i18n, GameSystemConfig } from "../midi-qol-rotv.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
 export class MidiSounds {
@@ -11,43 +11,63 @@ export class MidiSounds {
 		const { playlist, sound } = this.getSound(playListName, soundName);
 		//@ts-ignore
 		if (playlist && sound) { // TODO check this v10
+			//@ts-expect-error v12 AudioHelper moved to foundry.audio.AudioHelper
+			const faAudioHelper = foundry.audio?.AudioHelper;
+			if (faAudioHelper)
+				return faAudioHelper.play({ src: sound.path, volume: sound.volume, autoplay: true, loop: false }, true);
 			return AudioHelper.play({ src: sound.path, volume: sound.volume, autoplay: true, loop: false }, true);
 		}
 	}
 	static ActionTypes() {
-		//@ts-ignore
-		const config = CONFIG.ROTV;
+		const systemId = game.system.id.toUpperCase();
+		let damageEntries = {};
+		Object.keys(GameSystemConfig.damageTypes).forEach(key => damageEntries[key] = `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes[key].label}`);
+		let itemActionEntries = {};
+		Object.keys(GameSystemConfig.itemActionTypes).forEach(key => itemActionEntries[key] = `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[key]}`);
+		let actionTypes = {
+			itemRoll: `${i18n("DOCUMENT.Item")} ${i18n("TABLE.Roll")}`,
+			attack: i18n(`${systemId}.AttackRoll`),
+			damage: i18n(`${systemId}.DamageRoll`),
+			critical: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.CriticalSoundName")}`,
+			fumble: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.FumbleSoundName")}`,
+			hit: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.Hits")}`,
+			miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.Misses")}`,
+			none: i18n("None")
+		};
+		actionTypes = foundry.utils.mergeObject(actionTypes, itemActionEntries);
+		actionTypes = foundry.utils.mergeObject(actionTypes, damageEntries);
+		return actionTypes;
 		return {
 			itemRoll: `${i18n("DOCUMENT.Item")} ${i18n("TABLE.Roll")}`,
-			attack: i18n("ROTV.AttackRoll"),
-			damage: i18n("ROTV.DamageRoll"),
-			critical: `${i18n("ROTV.Attack")}: ${i18n("midi-qol-rotv.CriticalSoundName")}`,
-			fumble: `${i18n("ROTV.Attack")}: ${i18n("midi-qol-rotv.FumbleSoundName")}`,
-			hit: `${i18n("ROTV.Attack")}: ${i18n("midi-qol-rotv.Hits")}`,
-			miss: `${i18n("ROTV.Attack")}: ${i18n("midi-qol-rotv.Misses")}`,
-			abil: `${i18n("ROTV.Action")}: ${config.itemActionTypes["abil"]}`,
-			heal: `${i18n("ROTV.Action")}: ${config.itemActionTypes["heal"]}`,
-			msak: `${i18n("ROTV.Action")}: ${config.itemActionTypes["msak"]}`,
-			mwak: `${i18n("ROTV.Action")}: ${config.itemActionTypes["mwak"]}`,
-			other: `${i18n("ROTV.Action")}: ${config.itemActionTypes["other"]}`,
-			rsak: `${i18n("ROTV.Action")}: ${config.itemActionTypes["rsak"]}`,
-			rwak: `${i18n("ROTV.Action")}: ${config.itemActionTypes["rwak"]}`,
-			save: `${i18n("ROTV.Action")}: ${config.itemActionTypes["save"]}`,
-			util: `${i18n("ROTV.Action")}: ${config.itemActionTypes["util"]}`,
-			acid: `${i18n("ROTV.Damage")}: ${config.damageTypes.acid}`,
-			bludgeoning: `${i18n("ROTV.Damage")}: ${config.damageTypes.bludgeoning}`,
-			cold: `${i18n("ROTV.Damage")}: ${config.damageTypes.cold}`,
-			fire: `${i18n("ROTV.Damage")}: ${config.damageTypes.fire}`,
-			force: `${i18n("ROTV.Damage")}: ${config.damageTypes.force}`,
-			lightning: `${i18n("ROTV.Damage")}: ${config.damageTypes.lightning}`,
-			necrotic: `${i18n("ROTV.Damage")}: ${config.damageTypes.necrotic}`,
-			piercing: `${i18n("ROTV.Damage")}: ${config.damageTypes.piercing}`,
-			poison: `${i18n("ROTV.Damage")}: ${config.damageTypes.poison}`,
-			psychic: `${i18n("ROTV.Damage")}: ${config.damageTypes.psychic}`,
-			radiant: `${i18n("ROTV.Damage")}: ${config.damageTypes.radiant}`,
-			slashing: `${i18n("ROTV.Damage")}: ${config.damageTypes.slashing}`,
-			thunder: `${i18n("ROTV.Damage")}: ${config.damageTypes.thunder}`,
-			"midi-none": `${i18n("ROTV.Damage")}: ${config.damageTypes["midi-none"]}`,
+			attack: i18n(`${systemId}.AttackRoll`),
+			damage: i18n(`${systemId}.DamageRoll`),
+			critical: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.CriticalSoundName")}`,
+			fumble: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.FumbleSoundName")}`,
+			hit: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.Hits")}`,
+			miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol-rotv.Misses")}`,
+			abil: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["abil"]}`,
+			heal: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["heal"]}`,
+			msak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${game.system.id === "sw5e" ? "mpak" : "msak"}`]}`,
+			mwak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["mwak"]}`,
+			other: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["other"]}`,
+			rsak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${game.system.id === "sw5e" ? "rpak" : "rsak"}`]}`,
+			rwak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["rwak"]}`,
+			save: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["save"]}`,
+			util: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["util"]}`,
+			acid: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.acid}`,
+			bludgeoning: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.bludgeoning}`,
+			cold: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.cold}`,
+			fire: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.fire}`,
+			force: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.force}`,
+			lightning: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.lightning}`,
+			necrotic: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.necrotic}`,
+			piercing: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.piercing}`,
+			poison: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.poison}`,
+			psychic: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.psychic}`,
+			radiant: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.radiant}`,
+			slashing: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.slashing}`,
+			thunder: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.thunder}`,
+			"midi-none": `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes["midi-none"]}`,
 			none: i18n("None")
 		};
 	}
@@ -68,22 +88,19 @@ export class MidiSounds {
 		let subtype = "";
 		switch (item.type) {
 			case "weapon":
-				subtype = "weapon." + item.system.weaponType;
+				subtype = "weapon." + item.system.type.value;
 				break;
 			case "equipment":
-				subtype = "equipment." + item.system.armor.type;
+				subtype = "equipment." + item.system.type.value;
 				break;
 			case "consumable":
-				subtype = "consumable." + item.system.consumableType;
+				subtype = "consumable." + item.system.type.value;
 				break;
 			case "spell":
 				subtype = "spell." + item.system.school;
 				break;
 			case "tool":
-				subtype = "tool." + item.system.toolType;
-				break;
-			case "equipment":
-				subtype = "equipment." + item.system.equipmentType;
+				subtype = "tool." + item.system.tool.value;
 				break;
 			default: subtype = item.type + "any";
 		}
@@ -93,58 +110,61 @@ export class MidiSounds {
 		MidiSounds.weaponBaseTypes = {};
 		// TODO remove this if rotv getBaseItem bug is fixed
 		const config = CONFIG;
-		const packname = game.system.id === "rotv" ? config.ROTV?.sourcePacks.ITEMS : config.SW5E?.sourcePacks.ITEMS;
+		const packname = GameSystemConfig.sourcePacks.ITEMS;
 		if (packname) {
 			const packObject = game.packs.get(packname);
 			// TODO check this for v10 compendia
 			//@ts-ignore getindex 0 params
 			await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
-			const weaponTypes = game.system.id === "rotv" ? Object.keys(config.ROTV.weaponTypes) : Object.keys(config.SW5E.weaponTypes);
-			;
-			const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheetRelics`].cls;
+			const weaponTypes = Object.keys(GameSystemConfig.weaponTypes);
+			const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheetRotV`].cls;
 			for (let wt of weaponTypes) {
 				const baseTypes = await MidiSounds.getItemBaseTypes("weapon", wt);
-				MidiSounds.weaponBaseTypes = mergeObject(MidiSounds.weaponBaseTypes, baseTypes);
+				MidiSounds.weaponBaseTypes = foundry.utils.mergeObject(MidiSounds.weaponBaseTypes, baseTypes);
 			}
 		}
 		debug("Weapon base types are ", MidiSounds.weaponBaseTypes);
 	}
 	static async getItemBaseTypes(type, weaponType) {
+		const ConfigSettings = GameSystemConfig;
 		//@ts-ignore RotV
-		const baseIds = CONFIG.ROTV[`${type}Ids`];
+		const baseIds = ConfigSettings[`${type}Ids`];
 		if (baseIds === undefined)
 			return {};
-		const typeProperty = type === "armor" ? "armor.type" : `${type}Type`;
+		const typeProperty = `type.value`;
 		const baseType = weaponType;
 		const items = {};
 		for (const [name, id] of Object.entries(baseIds)) {
 			let baseItem;
-			//@ts-expect-error
-			if (game.system.id === "rotv" && isNewerVersion(game.system.version, "2.0.3")) {
+			if (globalThis.sw5e?.documents.Trait.getBaseItem) {
+				baseItem = await globalThis.sw5e.documents.Trait.getBaseItem(id);
+			}
+			else if (globalThis.rotv?.documents.Trait.getBaseItem) {
 				baseItem = await globalThis.rotv.documents.Trait.getBaseItem(id);
 			}
 			else {
 				globalThis.rotv.applications.ProficiencySelector.getBaseItem(id);
 			}
-			if (baseType !== foundry.utils.getProperty(baseItem.system, typeProperty))
+			if (baseType !== baseItem && foundry.utils.getProperty(baseItem.system, typeProperty))
 				continue;
-			items[name] = baseItem.name;
+			items[name] = baseItem?.name;
 		}
 		//@ts-ignore lhs[1]
-		return Object.fromEntries(Object.entries(items).sort((lhs, rhs) => lhs[1].localeCompare(rhs[1])));
+		const result = Object.fromEntries(Object.entries(items).sort((lhs, rhs) => lhs[1].localeCompare(rhs[1])));
+		return result;
 	}
 	static getSpecFor(actorType, type, subtype, weaponSubType, selector) {
 		let spec;
 		for (let atype of [actorType, "any"]) {
-			let specs = getProperty(midiSoundSettings, atype) ?? {};
+			let specs = foundry.utils.getProperty(midiSoundSettings, atype) ?? {};
 			if (!spec)
-				spec = getProperty(getProperty(specs, `weapon.${weaponSubType}`) ?? {}, selector);
+				spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, `weapon.${weaponSubType}`) ?? {}, selector);
 			if (!spec)
-				spec = getProperty(getProperty(specs, subtype) ?? {}, selector);
+				spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, subtype) ?? {}, selector);
 			if (!spec)
-				spec = getProperty(getProperty(specs, `${type}.any`) ?? {}, selector);
+				spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, `${type}.any`) ?? {}, selector);
 			if (!spec)
-				spec = getProperty(getProperty(specs, "all.any") ?? {}, selector);
+				spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, "all.any") ?? {}, selector);
 			if (spec)
 				return spec;
 		}
@@ -158,7 +178,7 @@ export class MidiSounds {
 	}
 	static processHook(workflow, selector) {
 		const subtype = this.getSubtype(workflow.item);
-		const baseType = workflow.item?.system.baseItem ?? "";
+		const baseType = workflow.item?.system.type?.baseItem ?? "";
 		let spec = this.getSpecFor(workflow.item?.parent?.type ?? "all", workflow.item.type, subtype, baseType, selector);
 		if (!spec)
 			return false;
@@ -184,7 +204,7 @@ export class MidiSounds {
 			if (!configSettings.useCustomSounds || !workflow.item)
 				return true;
 			if (!dice3dEnabled()
-				&& workflow.item.hatAttack && !await this.processHook(workflow, workflow.item.system.actionType)) {
+				&& workflow.item.hasAttack && !await this.processHook(workflow, workflow.item.system.actionType)) {
 				await this.processHook(workflow, "attack");
 			}
 			if (workflow.isCritical) {
@@ -211,8 +231,14 @@ export class MidiSounds {
 		});
 	}
 	static async createDefaultPlayList() {
-		if (!game.user?.isGM)
+		if (!game.user?.isGM) {
+			ui.notifications?.warn("Only a GM can create the default playlist");
 			return;
+		}
+		if (game.playlists?.getName("Midi Item Tracks") !== undefined) {
+			ui.notifications?.error("Midi Item Tracks already exists - delete it before creating the default playlist");
+			return;
+		}
 		const playlistData = {
 			"name": "Midi Item Tracks",
 			"description": "Midi Qol sample custom sounds",
@@ -600,6 +626,12 @@ export class MidiSounds {
 				}
 			}
 		};
+		if (game.system.id === "sw5e") {
+			soundSettings.rpak = soundSettings.rsak;
+			soundSettings.mpak = soundSettings.msak;
+			delete soundSettings.rsak;
+			delete soundSettings.msak;
+		}
 		if (game.user?.can("SETTINGS_MODIFY"))
 			await game.settings.set("midi-qol-rotv", "MidiSoundSettings", soundSettings);
 	}

@@ -20,10 +20,16 @@
                     style="border:0px">
                 </div>
                 <div class="midi-qol-rotv-tooltiptext" style="text-align: left;">
+                  {{#if damage.tooltip}}
+                  <div>{{{damage.tooltip}}}</div>
+                  {{else}}
                   <div>{{damage.di}}</div>
                   <div>{{damage.dr}}</div>
                   <div>{{damage.dv}}</div>
+                  <div>{{damage.da}}</div>
                   <div>{{damage.DR}}</div>
+                  <div>{{damage.dm}}</div>
+                  {{/if}}
                 </div>
                 </img>
               </div>
@@ -48,7 +54,7 @@
               </div>
             </td>
 
-            <td style="text-align:center;">
+            <td style="text-align:center;" >
               <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage."">
                 <option value="calc" selected>{{localize "midi-qol-rotv.DamageCardCalc"}}</option>
                 <option value="x1">x1</option>
@@ -65,8 +71,11 @@
           font-size: 10px;
           line-height: 1px;
         " aria-label="Click to update {{totalDamage}} x Multiplier accordingly to multiplier.">
-                <i aria-hidden="true" class="fas fa-check"
-                  title="Click to update {{totalDamage}} accordingly to multiplier."></i>
+              {{#if ../damageWasApplied}}
+                <i aria-hidden="true" class="fas fa-check midi-qol-rotv-disable-damage-button" title="Click to update {{totalDamage}} accordingly to multiplier."></i>
+              {{else}}
+                <i aria-hidden="true" class="fas fa-check midi-qol-rotv-enable-damage-button" title="Click to update {{totalDamage}} accordingly to multiplier."></i>
+              {{/if}}
               </button>
             </td>
             <td style="text-align:center">
@@ -76,7 +85,11 @@
           font-size: 10px;
           line-height: 1px;
         ">
-                <i aria-hidden="true" class="fas fa-undo" title="Click to undo damage"></i>
+              {{#if ../damageWasApplied}}
+                  <i aria-hidden="true" class="fas fa-undo midi-qol-rotv-enable-damage-button" title="Click to undo damage"></i>
+                {{else}}
+                  <i aria-hidden="true" class="fas fa-undo midi-qol-rotv-disable-damage-button" title="Click to undo damage"></i>
+                {{/if}}
               </button>
             </td>
           </tr>
