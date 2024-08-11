@@ -170,6 +170,7 @@ export class Workflow {
 		this.damageRollCount = 0;
 		this.advantage = undefined;
 		this.disadvantage = undefined;
+		this.distanceBracket = "nominal";
 		this.isVersatile = false;
 		this.templateId = null;
 		this.templateUuid = null;
@@ -663,11 +664,22 @@ export class Workflow {
             //console.warn("longRange:" + longRange);
 
 			switch (result) {
-				case "fail": return this.WorkflowState_RollFinished;
-				case "dis":
-					this.disadvantage = true;
-					this.attackAdvAttribution.add("DIS:range");
-					this.advReminderAttackAdvAttribution.add("DIS:Long Range");
+				case "fail": return this.WorkflowState_RollFinished;case "pointBlank":
+                    this.distanceBracket = "pointBlank";
+                    //console.log("pointBlank");
+                    break;
+                case "close" :
+                    this.distanceBracket = "close";
+                    //console.log("close");
+                    break;
+                case "far":
+                    this.distanceBracket = "far";
+                    //console.log("far");
+                    break;
+                case "extended":
+                    this.distanceBracket = "extended";
+                    //console.log("extended");
+                    break;
 			}
 			if (this.attackingToken !== attackingToken) { // changed the attacking token so update the canSee data
 				// need to clean this up
@@ -4098,6 +4110,67 @@ export class Workflow {
 		let isHit = true;
 		let isHitEC = false;
 		let item = this.item;
+
+        //apply distance modifier
+		console.log("before: ");
+		console.log(this.attackRoll.total);
+		console.log(this.attackTotal);
+        let distanceModifier = 0;
+        if (checkMechanic("checkRange")  && !this.item.system.properties?.bla  && !this.item.system.properties?.smk && !this.AoO && this.tokenId){
+            switch(this.distanceBracket){
+                case("normal"):
+                    break;
+                case "pointBlank":
+                    if (!this.item.system.properties?.spr && !this.item.system.properties?.thr && !this.item.system.properties?.unw){
+                        //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
+                        if(this.item.system.properties?.buc){
+                            //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
+                            distanceModifier = 9;
+                            //console.log("adding nine");
+                        }
+                        else{
+                            //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
+                            distanceModifier = 6;
+                            //console.log("adding six");
+                        }
+                    }
+                	break;
+                case "close" :
+                    if (!this.item.system.properties?.spr && !this.item.system.properties?.thr && !this.item.system.properties?.unw){
+                        //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
+                        if (this.item.system.properties?.buc){
+                            //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
+                            distanceModifier = 6;
+                            //console.log("adding six");
+                        }
+                        else{
+                            //this.attackRoll.terms.push(new NumericTerm({ number: Number(3) }));
+                            distanceModifier = 3;
+                            //console.log("adding three");
+                        }
+                    }
+                	break;
+                case "far":
+                    //this.attackRoll.terms.push(new OperatorTerm({ operator: "-" }));
+                    //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
+                    distanceModifier = -9;
+                    //console.log("substracting nine");
+                	break;
+                case "extended":
+                    //this.attackRoll.terms.push(new OperatorTerm({ operator: "-" }));
+                    //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
+                    distanceModifier = -3;
+                    //console.log("subtracting three");
+                	break;
+            }
+        }
+
+        this.attackTotal += distanceModifier;
+
+		console.log("after: ");
+		console.log(this.attackTotal);
+
+
 		// check for a hit/critical/fumble
 		if (item?.system.target?.type === "self") {
 			this.targets = getTokenForActorAsSet(this.actor);
@@ -4379,6 +4452,7 @@ export class Workflow {
 				playerName: getTokenPlayerName(targetToken instanceof Token ? targetToken.document : targetToken),
 				bonusAC,
 				hitResultNumeric,
+				distanceModifier,
 				attackTotal
 			};
 		}

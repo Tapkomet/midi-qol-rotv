@@ -5,6 +5,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/module/utils.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/utils.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/module/workflow.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/module/workflow.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/hits.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/hits.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,9 +70,9 @@
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="480" y="113" width="938" height="609" key="find.popup" timestamp="1723381219498">
+    <state x="499" y="113" width="938" height="609" key="find.popup" timestamp="1723383945885">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="480" y="113" width="938" height="609" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1723381219498" />
+    <state x="499" y="113" width="938" height="609" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1723383945885" />
   </component>
 </project>

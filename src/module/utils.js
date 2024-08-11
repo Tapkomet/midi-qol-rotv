@@ -2829,10 +2829,30 @@ export function checkRange(itemIn, tokenRef, targetsRef, showWarning = true) {
 					};
 				}
 			}
+			if (distance == 1) {
+				return {
+					result: "pointBlank",
+					range,
+					longRange
+				};
+			}
+			if (distance <= range * 0.5) {
+				return {
+					result: "close",
+					range,
+					longRange
+				};
+			}
+			if (distance > range * 3) {
+				return {
+					result: "far",
+					range,
+					longRange
+				};
+			}
 			if (distance > range) {
 				return {
-					result: "dis",
-					reason: `${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
+					result: "extended",
 					range,
 					longRange
 				};
