@@ -4121,7 +4121,7 @@ export class Workflow {
                 case("normal"):
                     break;
                 case "pointBlank":
-                    if (!this.item.system.properties?.spr && !this.item.system.properties?.thr && !this.item.system.properties?.unw){
+                    if (!this.item.system.properties?.spr && !this.item.system.actionType?==="mwak" && !this.item.system.properties?.unw){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
                         if(this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
@@ -4136,7 +4136,7 @@ export class Workflow {
                     }
                 	break;
                 case "close" :
-                    if (!this.item.system.properties?.spr && !this.item.system.properties?.thr && !this.item.system.properties?.unw){
+                    if (!this.item.system.properties?.spr && !this.item.system.actionType?==="mwak" && !this.item.system.properties?.unw){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
                         if (this.item.system.properties?.buc){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
