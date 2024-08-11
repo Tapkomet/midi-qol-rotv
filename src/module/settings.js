@@ -180,7 +180,7 @@ class ConfigSettings {
 			wallsBlockRange: "center",
 			diplsayBonusRolls: true,
 			coverCalculation: "none",
-			nearbyFoe: 5,
+			nearbyFoe: 1,
 			nearbyAllyRanged: 0,
 			incapacitated: true,
 			removeHiddenInvis: true,
@@ -491,7 +491,7 @@ export let fetchParams = () => {
 		maxDRValue: false,
 		DRAllPerDamageDetail: true,
 		nearbyAllyRanged: 0,
-		nearbyFoe: 5,
+		nearbyFoe: 1,
 		optionalCritRule: -1,
 		removeHiddenInvis: true,
 		wallsBlockRange: "center",
@@ -531,7 +531,7 @@ export let fetchParams = () => {
 		configSettings.requireMagical = "nonspell";
 	if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
 		if (configSettings.optionalRulesEnabled)
-			configSettings.optionalRules.nearbyFoe = 5;
+			configSettings.optionalRules.nearbyFoe = 1;
 		else
 			configSettings.optionalRules.nearbyFoe = 0;
 	}

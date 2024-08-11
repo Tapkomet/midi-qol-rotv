@@ -63,7 +63,7 @@
       "maxDRValue": true,
       "DRAllPerDamageDetail": true,
       "nearbyAllyRanged": 0,
-      "nearbyFoe": 5,
+      "nearbyFoe": 1,
       "optionalCritRule": -1,
       "removeHiddenInvis": true,
       "wallsBlockRange": "center",

@@ -1881,7 +1881,7 @@ export class Workflow {
 				nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
 			}
 			else if (this.item.system.properties?.has("thr")) {
-				const meleeRange = 5 + (this.item.system?.properties?.has("rch") ? 5 : 0);
+				const meleeRange = 1 + (this.item.system?.properties?.has("rch") ? 1 : 0);
 				//@ts-expect-error .first
 				if (getDistance(me, this.targets.first(), false) <= meleeRange)
 					nearbyFoe = false;
