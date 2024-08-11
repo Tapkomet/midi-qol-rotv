@@ -669,9 +669,9 @@ export class Workflow {
 					this.attackAdvAttribution.add("DIS:range");
 					this.advReminderAttackAdvAttribution.add("DIS:Long Range");
 			}
-			if (this.attackingToken !== attac
-				for (let tokenRef of thiskingToken) { // changed the attacking token so update the canSee data
-				// need to clean this up.targets) {
+			if (this.attackingToken !== attackingToken) { // changed the attacking token so update the canSee data
+				// need to clean this up
+				for (let tokenRef of this.targets) {
 					const target = getToken(tokenRef);
 					this.attackingToken = attackingToken;
 					const token = this.attackingToken;

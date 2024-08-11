@@ -2831,7 +2831,7 @@ export function checkRange(itemIn, tokenRef, targetsRef, showWarning = true) {
 			}
 			if (distance > range) {
 				return {
-					result: "disNuts",
+					result: "dis",
 					reason: `${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
 					range,
 					longRange
