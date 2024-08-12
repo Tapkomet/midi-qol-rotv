@@ -4302,7 +4302,7 @@ export class Workflow {
 							this.isCritical = attackTotal >= (targetToken.actor?.system.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
 						}
 					}
-					hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
+					hitResultNumeric = this.isCritical ? "++" : `${attackTotal}`;
 				}
 				// TODO come back and parameterise with flags and actor to use
 				const midiFlagsActorFail = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.fail`);
