@@ -3,7 +3,7 @@
   "title": "Midi QOL ROTV",
   "description": "Automates rolling weapon/spell attacks and applying damage",
 
-  "version": "11.4.51",
+  "version": "11.4.6",
   "authors": [
     { "name": "Tapkomet"
     }
