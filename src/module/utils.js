@@ -10,14 +10,17 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { busyWait } from "./tests/setupTest.js";
 const defaultTimeout = 30;
 export function getDamageType(flavorString) {
-	if (flavorString === '')
-		return "none";
+	if (flavorString === ''){
+		return "normal";
+    }
 	if (GameSystemConfig.damageTypes[flavorString] !== undefined) {
 		return flavorString;
 	}
 	if (GameSystemConfig.healingTypes[flavorString] !== undefined) {
 		return flavorString;
 	}
+	console.warn("it got to this part");
+	console.warn(flavorString);
 	//@ts-expect-error
 	const validDamageTypes = Object.entries(GameSystemConfig.damageTypes).map(e => { e[1] = e[1].label.toLowerCase(); return e; }).deepFlatten().concat(Object.entries(GameSystemConfig.healingTypes).deepFlatten());
 	//@ts-expect-error
@@ -191,6 +194,9 @@ export function getTokenForActorAsSet(actor) {
 }
 // Calculate the hp/tempHP lost for an amount of damage of type
 export function calculateDamage(item, a, appliedDamage, t, totalDamage, dmgType, existingDamage) {
+
+    if(dmgType=="temphp") dmgType="normal";
+
 	if (debugEnabled > 1)
 		debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType);
 	let prevDamage = existingDamage?.find(ed => ed.tokenId === t.id);
@@ -277,8 +283,7 @@ export let getTraitMult = (actor, dmgTypeString, item, damageProperties = []) =>
 	let totalMult = 1;
 	if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp"))
 		totalMult = -1;
-	if (dmgTypeString.includes("midi-none"))
-		return 0;
+	//if (dmgTypeString.includes("midi-none")) return 1;
 	if (configSettings.damageImmunities === "none")
 		return totalMult;
 	let phsyicalDamageTypes;
