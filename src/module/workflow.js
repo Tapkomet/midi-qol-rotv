@@ -664,7 +664,9 @@ export class Workflow {
             //console.warn("longRange:" + longRange);
 
 			switch (result) {
-				case "fail": return this.WorkflowState_RollFinished;case "pointBlank":
+				case "fail":
+				return this.WorkflowState_RollFinished;
+				case "pointBlank":
                     this.distanceBracket = "pointBlank";
                     //console.log("pointBlank");
                     break;
@@ -1890,13 +1892,13 @@ export class Workflow {
 		// Nearby foe gives disadvantage on ranged attacks
 		if (checkRule("nearbyFoe")
 			&& !foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.ignoreNearbyFoes`)
-			&& (["rwak", "rsak", "rpak"].includes(actType) || (this.item.system.properties?.has("thr") && actType == "mwak"))) {
+			&& (["rwak", "rsak", "rpak"].includes(actType) || (item.system.properties?.has("thr") && actType == "mwak"))) {
 			let nearbyFoe;
 			const me = this.attackingToken ?? canvas?.tokens?.get(this.tokenId);
 			if (actType !== "mwak") { // one of rwak/rsak/rpak
 				nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
 			}
-			else if (this.item.system.properties?.has("thr")) {
+			else if (item.system.properties?.has("thr")) {
 				const meleeRange = 1 + (this.item.system?.properties?.has("rch") ? 1 : 0);
 				//@ts-expect-error .first
 				if (getDistance(me, this.targets.first(), false) <= meleeRange)
@@ -1914,7 +1916,7 @@ export class Workflow {
 			}
 			// this.disadvantage = this.disadvantage || nearbyFoe;
 		}
-		if (["tiny", "sm"].includes(this.actor.system.traits?.size) && this.item.system.properties?.has("hvy")) {
+		if (["tiny", "sm"].includes(this.actor.system.traits?.size) && item.system.properties?.has("hvy")) {
 			const failDisadvantageHeavy = getProperty(this.actor, `flags.${MODULE_ID}.fail.disadvantage.heavy`);
 			if (failDisadvantageHeavy && !conditionData)
 				conditionData = createConditionData({ workflow: this, target, actor: this.actor });
@@ -4120,14 +4122,15 @@ export class Workflow {
 		//console.log(this.attackRoll.total);
 		//console.log(this.attackTotal);
         let distanceModifier = 0;
-        if (checkMechanic("checkRange")  && !this.item.system.properties?.bla  && !this.item.system.properties?.smk && !this.AoO && this.tokenId){
+        if (checkMechanic("checkRange")  && !item.system.properties?.has("bla")  && !item.system.properties?.has("smk") && !this.AoO && this.tokenId){
+
             switch(this.distanceBracket){
                 case("normal"):
                     break;
                 case "pointBlank":
-                    if (!this.item.system.properties?.spr && this.item.system.actionType!=="mwak" && !this.item.system.properties?.unw){
+                    if (!item.system.properties?.has("spr") && this.item.system.actionType!=="mwak" && !item.system.properties?.has("unw")){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
-                        if(this.item.system.properties?.buc){
+                        if(item.system.properties?.has("buc")||item.system.properties?.has("bon")){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(9) }));
                             distanceModifier = 9;
                             //console.log("adding nine");
@@ -4140,9 +4143,9 @@ export class Workflow {
                     }
                 	break;
                 case "close" :
-                    if (!this.item.system.properties?.spr && this.item.system.actionType!=="mwak" && !this.item.system.properties?.unw){
+                    if (!item.system.properties?.has("spr") && this.item.system.actionType!=="mwak" && !item.system.properties?.has("unw")){
                         //this.attackRoll.terms.push(new OperatorTerm({ operator: "+" }));
-                        if (this.item.system.properties?.buc){
+                        if (item.system.properties?.has("buc")||item.system.properties?.has("bon")){
                             //this.attackRoll.terms.push(new NumericTerm({ number: Number(6) }));
                             distanceModifier = 6;
                             //console.log("adding six");
