@@ -242,26 +242,26 @@ export function defineChatMessageMidiClass(baseClass) {
 				const canCrit = ["attack", "death"].includes(this.getFlag("rotv", "roll.type")) || ["attack"].includes(foundry.utils.getProperty(d20Roll, "options.midi-qol-rotv.rollType"));
 				const isAttack = (this.getFlag("rotv", "roll.type") === "attack") || ["attack"].includes(foundry.utils.getProperty(d20Roll, "options.midi-qol-rotv.rollType"));
 				const showResult = isAttack ? displayAttackResult : displayChallenge;
-				if (d.options.target && showResult) {
+				/*if (d.options.target && showResult) {
 					if (d20Roll.total >= d.options.target)
 						total.classList.add("success");
 					else
 						total.classList.add("failure");
-				}
+				}*/
 				if (canCrit && d20Roll.isCritical)
 					total.classList.add("critical");
-				if (canCrit && d20Roll.isFumble)
-					total.classList.add("fumble");
+				//if (canCrit && d20Roll.isFumble)
+				//	total.classList.add("fumble");
 				const icons = document.createElement("div");
 				icons.classList.add("icons");
 				if (total.classList.contains("critical"))
 					icons.append(makeIcon("fa-check-double"));
-				else if (total.classList.contains("fumble"))
+				/*else if (total.classList.contains("fumble"))
 					icons.append(makeIcon("fa-xmark"), makeIcon("fa-xmark"));
 				else if (total.classList.contains("success"))
 					icons.append(makeIcon("fa-check"));
 				else if (total.classList.contains("failure"))
-					icons.append(makeIcon("fa-xmark"));
+					icons.append(makeIcon("fa-xmark"));*/
 				if (icons.children.length)
 					total.append(icons);
 			}

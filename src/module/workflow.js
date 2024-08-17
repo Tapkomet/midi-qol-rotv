@@ -2715,7 +2715,7 @@ export class Workflow {
 						if (this.isCritical) {
 							content = content.replace('dice-total', 'dice-total critical');
 						}
-						else if (this.isFumble) {
+						/*else if (this.isFumble) {
 							content = content.replace('dice-total', 'dice-total fumble');
 						}
 						else if (d.options.target) {
@@ -2723,7 +2723,7 @@ export class Workflow {
 								content = content.replace('dice-total', 'dice-total success');
 							else
 								content = content.replace('dice-total', 'dice-total failure');
-						}
+						}*/
 						this.d20AttackRoll = d.total;
 					}
 				}
