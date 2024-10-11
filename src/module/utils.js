@@ -241,18 +241,17 @@ export function calculateDamage(item, a, appliedDamage, t, totalDamage, dmgType,
     		else {value = value - dr;}
     }
 
-
-	if (dmgType.includes("temphp")) { // only relevent for healing of tmp HP
-		var newTemp = Math.max(tmp, -value, 0);
-		var newHP = oldHP;
-	}
-	else {
+	//if (dmgType.includes("temphp")) { // only relevent for healing of tmp HP
+	//	var newTemp = Math.max(tmp, -value, 0);
+	//	var newHP = oldHP;
+	//}
+	//else {
 		var dt = value > 0 ? Math.min(tmp, value) : 0;
 		var newTemp = tmp - dt;
 		var newHP;
 		//@ts-expect-error
 		newHP = Math.clamp(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax) || 0));
-	}
+	//}
 	//TODO review this awfulness
 	// Stumble around trying to find the actual token that corresponds to the multi level token TODO make this sane
 	const altSceneId = foundry.utils.getProperty(t, "flags.multilevel-tokens.sscene");
@@ -284,8 +283,9 @@ export let getTraitMult = (actor, dmgTypeString, item, damageProperties = []) =>
 	if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp"))
 		totalMult = -1;
 	//if (dmgTypeString.includes("midi-none")) return 1;
-	if (configSettings.damageImmunities === "none")
+	if (configSettings.damageImmunities === "none"){
 		return totalMult;
+	}
 	let phsyicalDamageTypes;
 	//@ts-expect-error
 	if (foundry.utils.isNewerVersion(game.system.version, "3.1.99")) { // physicalDamageTypes have gone away
@@ -391,8 +391,8 @@ export let getTraitMult = (actor, dmgTypeString, item, damageProperties = []) =>
 	// Check the custom immunities
 };
 export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options = { label: "defaultDamage", existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: false, noConcentrationCheck: false }) {
-	console.warn("applyTokenDamage");
-	console.warn(item);
+	//console.warn("applyTokenDamage");
+	//console.warn(item);
 
 	let allDamages = {};
 	damageDetail = damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }));
@@ -1177,8 +1177,8 @@ export async function processDamageRoll(workflow, defaultDamageType) {
 					//@ts-expect-error
 					let returnDamages = foundry.utils.duplicate(token.actor.calculateDamage(damages, options));
 
-	                console.warn("returnDamages");
-    	            console.warn(returnDamages);
+	                //console.warn("returnDamages");
+    	            //console.warn(returnDamages);
 
 					if (configSettings.singleConcentrationRoll || type !== "otherDamage") {
 						tokenDamages[type] = returnDamages;
