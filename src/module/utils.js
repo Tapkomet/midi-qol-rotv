@@ -3919,8 +3919,8 @@ export async function processAttackRollBonusFlags() {
 			foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${attackBonus}`);
 		if (hasAttackFlag === undefined)
 			return false;
-		if (this.isFumble && !hasAttackFlag?.includes("roll"))
-			return false;
+		//if (this.isFumble && !hasAttackFlag?.includes("roll"))
+		//	return false;
 		if (!this.actor.flags[MODULE_ID].optional[flag].count)
 			return true;
 		return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
@@ -3933,7 +3933,8 @@ export async function processAttackRollBonusFlags() {
 	if (this.targets.size === 1) {
 		const targetAC = this.targets.first().actor.system.attributes.ac.value;
 		this.processAttackRoll();
-		const isMiss = this.isFumble || this.attackRoll.total < targetAC;
+		//const isMiss = this.isFumble || this.attackRoll.total < targetAC;
+		const isMiss = this.attackRoll.total < targetAC;
 		if (isMiss) {
 			attackBonus = "attack.fail.all";
 			if (this.item && this.item.hasAttack)
@@ -3944,8 +3945,8 @@ export async function processAttackRollBonusFlags() {
 					|| foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${attackBonus}`);
 				if (hasAttackFlag === undefined)
 					return false;
-				if (this.isFumble && !hasAttackFlag?.includes("roll"))
-					return false;
+				//if (this.isFumble && !hasAttackFlag?.includes("roll"))
+				//	return false;
 				if (!this.actor.flags[MODULE_ID].optional[flag].count)
 					return true;
 				return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;

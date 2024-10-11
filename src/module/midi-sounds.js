@@ -210,9 +210,9 @@ export class MidiSounds {
 			if (workflow.isCritical) {
 				await this.processHook(workflow, "critical");
 			}
-			else if (workflow.isFumble) {
-				await this.processHook(workflow, "fumble");
-			}
+			//else if (workflow.isFumble) {
+			//	await this.processHook(workflow, "fumble");
+			//}
 			else if (workflow.hitTargets.size === 0) {
 				await this.processHook(workflow, "miss");
 			}

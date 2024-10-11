@@ -1092,12 +1092,12 @@ export class Workflow {
 		expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell"]);
 		await this.expireTargetEffects(["isAttacked"]);
 		await this.displayDamageRolls(configSettings.mergeCard);
-		if (this.isFumble) {
+		/*if (this.isFumble) {
 			this.failedSaves = new Set();
 			this.hitTargetss = new Set();
 			this.hitTargetsEC = new Set();
 			return this.WorkflowState_ApplyDynamicEffects;
-		}
+		}*/
 		return this.WorkflowState_WaitForSaves;
 	}
 	async WorkflowState_DamageRollCompleteCancelled(context = {}) {
@@ -2898,7 +2898,7 @@ export class Workflow {
 			showHits,
 			hits: this.hitDisplayData,
 			isGM: game.user?.isGM,
-			displayHitResultNumeric: configSettings.displayHitResultNumeric && !this.isFumble && !this.isCritical
+			displayHitResultNumeric: configSettings.displayHitResultNumeric && !this.isCritical
 		};
 		if (debugEnabled > 0)
 			warn("displayHits |", templateData, whisper, doMerge);
@@ -3659,13 +3659,13 @@ export class Workflow {
 				const dterm = saveRoll.terms[0];
 				const diceRoll = dterm?.results?.find(result => result.active)?.result ?? (saveRoll.total);
 				//@ts-expect-error
-				isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+				//isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
 				//@ts-expect-error
 				isCritical = diceRoll >= (dterm.options?.critical ?? 20);
 			}
 			else if (result?.isBR) {
 				isCritical = result.isCritical;
-				isFumble = result.isFumble;
+				//isFumble = result.isFumble;
 			}
 			let coverSaveBonus = 0;
 			if (this.item && this.item.hasSave && this.item.system.save?.ability === "dex") {
@@ -3713,7 +3713,7 @@ export class Workflow {
 			saveRollTotal += coverSaveBonus;
 			let saved = saveRollTotal >= rollDC;
 			if (checkRule("criticalSaves")) { // normal d20 roll/lmrtfy/monks roll
-				saved = (isCritical || saveRollTotal >= rollDC) && !isFumble;
+				saved = (isCritical || saveRollTotal >= rollDC);
 			}
 			if (foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.sculptSpells`) && (this.rangeTargeting || this.temptargetConfirmation) && this.item?.system.school === "evo" && this.preSelectedTargets.has(target)) {
 				saved = true;
@@ -3751,7 +3751,7 @@ export class Workflow {
 					const dterm = saveRoll.terms[0];
 					const diceRoll = dterm?.results?.find(result => result.active)?.result ?? (saveRoll.total);
 					//@ts-expect-error
-					isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+					//isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
 					//@ts-expect-error
 					isCritical = diceRoll >= (dterm.options?.critical ?? 20);
 				}
@@ -3789,12 +3789,13 @@ export class Workflow {
 				const dterm = saveRoll.terms[0];
 				const diceRoll = dterm?.results?.find(result => result.active)?.result ?? (saveRoll.total);
 				//@ts-expect-error
-				isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+				//isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+				isFumble = false;
 				//@ts-expect-error
 				isCritical = diceRoll >= (dterm.options?.critical ?? 20);
 			}
-			if (isFumble)
-				this.fumbleSaves.add(target);
+			//if (isFumble)
+			//	this.fumbleSaves.add(target);
 			if (isCritical)
 				this.criticalSaves.add(target);
 			if (this.checkSuperSaver(target, this.saveItem.system.save.ability))
@@ -4104,10 +4105,11 @@ export class Workflow {
 		this.isCritical = this.diceRoll >= criticalThreshold;
 		const midiFumble = this.item && foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.fumbleThreshold`);
 		//@ts-expect-error .funble
-		let fumbleTarget = this.attackRoll.terms[0].options.fumble ?? 1;
-		if (Number.isNumeric(midiFumble))
-			fumbleTarget = midiFumble;
-		this.isFumble = this.diceRoll <= fumbleTarget;
+		//let fumbleTarget = this.attackRoll.terms[0].options.fumble ?? 1;
+		//if (Number.isNumeric(midiFumble))
+		//	fumbleTarget = midiFumble;
+		this.isFumble = false;
+		//this.isFumble = this.diceRoll <= fumbleTarget;
 		this.attackTotal = this.attackRoll.total ?? 0;
 		if (debugEnabled > 1)
 			debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
@@ -4380,14 +4382,14 @@ export class Workflow {
 				isHitResult = "critical";
 				hitSymbol = "fa-check-double";
 			}
-			else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
-				isHitResult = "miss";
-				hitSymbol = "fa-times";
-			}
-			else if (this.isFumble) {
+			//else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+			//	isHitResult = "miss";
+			//	hitSymbol = "fa-times";
+			//}
+			/*else if (this.isFumble) {
 				isHitResult = "fumble";
 				hitSymbol = "fa-times";
-			}
+			}*/
 			else if (isHit) {
 				isHitResult = "hit";
 				hitSymbol = "fa-check";
@@ -4439,8 +4441,7 @@ export class Workflow {
 					// hitString = `(${adRoll.result ?? adRoll.total}): ${hitString}`
 				}
 			}
-			if (this.isFumble)
-				hitResultNumeric = "--";
+			//if (this.isFumble) hitResultNumeric = "--";
 			const targetUuid = getTokenDocument(targetToken)?.uuid ?? "";
 			this.hitDisplayData[targetUuid] = {
 				isPC: targetToken.actor?.hasPlayerOwner,
@@ -4653,7 +4654,8 @@ export class Workflow {
 			const result = results[i];
 			let rollTotal = results[i]?.total || 0;
 			this.isCritical = result.dice[0].total <= criticalTarget;
-			this.isFumble = result.dice[0].total >= fumbleTarget;
+			this.isFumble = false;
+			//this.isFumble = result.dice[0].total >= fumbleTarget;
 			this.activeDefenceRolls[getTokenDocument(target)?.uuid ?? ""] = results[i];
 			let hit = this.isCritical || rollTotal < this.activeDefenceDC;
 			if (hit) {
@@ -5037,10 +5039,10 @@ export class TrapWorkflow extends Workflow {
 			return this.WorkflowState_DamageRollComplete;
 		if (!itemHasDamage(this.item))
 			return this.WorkflowState_AllRollsComplete;
-		if (this.isFumble) {
+		//if (this.isFumble) {
 			// fumble means no trap damage/effects
-			return this.WorkflowState_RollFinished;
-		}
+		//	return this.WorkflowState_RollFinished;
+		//}
 		if (debugEnabled > 1)
 			debug("TrapWorkflow: Rolling damage ", this.event, this.spellLevel, this.rollOptions.versatile, this.targets, this.hitTargets);
 		this.rollOptions.fastForward = true;
@@ -5061,9 +5063,9 @@ export class TrapWorkflow extends Workflow {
 		this.damageDetail = createDamageDetail({ roll: this.damageRolls, item: this.item, defaultType: defaultDamageType });
 		// apply damage to targets plus saves plus immunities
 		await this.displayDamageRolls(configSettings.mergeCard);
-		if (this.isFumble) {
+		/*if (this.isFumble) {
 			return this.WorkflowState_ApplyDynamicEffects;
-		}
+		}*/
 		return this.WorkflowState_AllRollsComplete;
 	}
 	async WorkflowState_AllRollsComplete(context = {}) {
@@ -5204,9 +5206,9 @@ export class DDBGameLogWorkflow extends Workflow {
 			this.hitTargetsEC = new Set();
 		}
 		// apply damage to targets plus saves plus immunities
-		if (this.isFumble) { //TODO: Is this right?
+		/*if (this.isFumble) { //TODO: Is this right?
 			return this.WorkflowState_RollFinished;
-		}
+		}*/
 		if (this.saveItem.hasSave)
 			return this.WorkflowState_WaitForSaves;
 		return this.WorkflowState_AllRollsComplete;
