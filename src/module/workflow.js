@@ -1916,7 +1916,7 @@ export class Workflow {
 			}
 			// this.disadvantage = this.disadvantage || nearbyFoe;
 		}
-		if (["tiny", "sm"].includes(this.actor.system.traits?.size) && item.system.properties?.has("hvy")) {
+		/*if (["tiny", "sm"].includes(this.actor.system.traits?.size) && item.system.properties?.has("hvy")) {
 			const failDisadvantageHeavy = getProperty(this.actor, `flags.${MODULE_ID}.fail.disadvantage.heavy`);
 			if (failDisadvantageHeavy && !conditionData)
 				conditionData = createConditionData({ workflow: this, target, actor: this.actor });
@@ -1925,7 +1925,7 @@ export class Workflow {
 				this.attackAdvAttribution.add("DIS:small");
 				this.advReminderAttackAdvAttribution.add("DIS:Small");
 			}
-		}
+		}*/
 		await this.checkTargetAdvantage();
 	}
 	processDamageEventOptions() {
